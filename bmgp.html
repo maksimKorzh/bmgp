@@ -42,6 +42,11 @@
     // Side to move
     var side = BLACK;
 
+    // Count liberties & blocks
+    var liberties = [];
+    var block = [];
+    var ko = EMPTY;
+
     // Rendered cell size
     const cell = canvas.width / size;
 
@@ -83,16 +88,6 @@
       }
     }
 
-    // Put stone on board
-    function setStone(sq, color) {
-      if (board[sq] == 0) {
-        board[sq] = color;
-        side = (side == BLACK) ? WHITE : BLACK;
-        drawBoard();
-        printPosition();
-      }
-    }
-
     // Handle mouse click event
     canvas.addEventListener('click', function (event) {
       let rect = canvas.getBoundingClientRect();
@@ -103,6 +98,33 @@
       let sq = row * size + col;
       setStone(sq, side);
     });
+
+    // Put stone on board
+    function setStone(sq, color) {
+      if (board[sq] != EMPTY) {
+        alert("Illegal move!");
+        return false;
+      } else if (sq == ko) {
+        alert("Ko!");
+        return false;
+      }
+      let old_ko = ko;
+      ko = EMPTY;
+      board[sq] = color;
+      captures(3 - color);
+      count(sq, color);
+      let suicide = liberties.length ? false : true; 
+      restoreBoard();
+      if (suicide) {
+        board[sq] = EMPTY;
+        ko = old_ko;
+        side = 3 - side;
+        alert("Suicide move!");
+      }
+      side = 3 - side;
+      drawBoard();
+      printPosition();
+    }
 
     // Init board
     function initBoard() {
@@ -122,14 +144,52 @@
     // Handle captures
     function captures(color) {
       for (let sq = 0; sq < size ** 2; sq++) {
-        let stone = board[square];
+        let stone = board[sq];
         if (stone == OFFBOARD) continue;
         if (stone & color) {
-          //count(sq, color)
-          //if (len(liberties) == 0) clearBlock();
-          //restore_board()
+          count(sq, color);
+          if (liberties.length == 0) clearBlock();
+          restoreBoard()
         }
       }
+    }
+
+    // Count liberties, save stone group coords
+    function count(sq, color) {
+      stone = board[sq];
+      if (stone == OFFBOARD) return;
+      if (stone && (stone & color) && (stone & MARKER) == 0) {
+        block.push(sq);
+        board[sq] |= MARKER;
+        count(sq - size, color);
+        count(sq - 1, color);
+        count(sq + size, color);
+        count(sq + 1, color);
+      } else if (stone == EMPTY) {
+        board[sq] |= LIBERTY;
+        liberties.push(sq);
+      }
+    }
+ 
+    // Restore the board after counting stones
+    function restoreBoard() {
+      clearGroups();
+      for (let sq = 0; sq < size ** 2; sq++) {
+        if (board[sq] != OFFBOARD) board[sq] &= 3;
+      }
+    }
+
+    // Remove captured stones
+    function clearBlock() {
+      if (block.length == 1) ko = block[0];
+      for (let i = 0; i < block.length; i++)
+        board[block[i]] = EMPTY;
+    }
+
+    // Clear groups
+    function clearGroups() {
+      block = [];
+      liberties = [];
     }
 
     // Search move
