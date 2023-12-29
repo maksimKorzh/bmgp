@@ -96,16 +96,16 @@
       let col = Math.floor(mouseX / cell);
       let row = Math.floor(mouseY / cell);
       let sq = row * size + col;
-      setStone(sq, side);
+      setStone(sq, side, true);
     });
 
     // Put stone on board
-    function setStone(sq, color) {
+    function setStone(sq, color, user) {
       if (board[sq] != EMPTY) {
-        alert("Illegal move!");
+        if (user) alert("Illegal move!");
         return false;
       } else if (sq == ko) {
-        alert("Ko!");
+        if (user) alert("Ko!");
         return false;
       }
       let old_ko = ko;
@@ -119,11 +119,12 @@
         board[sq] = EMPTY;
         ko = old_ko;
         side = 3 - side;
-        alert("Suicide move!");
+        if (user) alert("Suicide move!");
+        return false;
       }
       side = 3 - side;
       drawBoard();
-      printPosition();
+      return true;
     }
 
     // Init board
@@ -192,32 +193,43 @@
       liberties = [];
     }
 
-    // Search move
+    // file:///home/cmk/Desktop/bmgp/bmgp.htmlSearch move
     function search(depth) {
       // Loop over the board squares
       for (let sq = 0; sq < size ** 2; sq++) {
         // Skip offboard squares
-        if (board[sq] == 7) continue;
+        if (board[sq]) continue;
 
-        // Generate move
-        if (!board[sq]) {
-          // Preserve board position
-          old_board = JSON.stringify(board);
-          
-          // Make move
-          board[sq] = 1; printBoard(); alert();
+        // Preserve board position
+        old_board = JSON.stringify(board);
+        old_side = side;
+        old_ko = ko;
+        
+        // Make move
+        if (setStone(sq, side, false))
           // Search recursively
+          printPosition();
 
-          // Take back
-          board = JSON.parse(old_board); printBoard(); alert();
-        }
+        // Take back
+        board = JSON.parse(old_board);
+        side = old_side;
+        ko = old_ko;
       }
     }
 
     // Main
-    initBoard();
-    //search();
-    printPosition();
+    //initBoard();
+    board = [
+      7, 7, 7, 7, 7, 7, 7,
+      7, 1, 1, 0, 2, 2, 7,
+      7, 1, 0, 1, 2, 0, 7,
+      7, 0, 1, 2, 0, 2, 7,
+      7, 0, 0, 1, 2, 0, 7,
+      7, 0, 2, 1, 0, 0, 7,
+      7, 7, 7, 7, 7, 7, 7
+    ]; ko = 25; side = BLACK;
+    search();
+    //printPosition();
     drawBoard();
   </script>
 </body>
