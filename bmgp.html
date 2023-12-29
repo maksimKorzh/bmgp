@@ -57,6 +57,7 @@
         position += (!(sq % size)) ? "\n" : "";
         position += board[sq] + " ";
       };console.log(position);
+      console.log(side);
     }
 
     // Print board
@@ -110,6 +111,7 @@
       }
       let old_ko = ko;
       ko = EMPTY;
+      
       board[sq] = color;
       captures(3 - color);
       count(sq, color);
@@ -118,12 +120,12 @@
       if (suicide) {
         board[sq] = EMPTY;
         ko = old_ko;
-        side = 3 - side;
         if (user) alert("Suicide move!");
+        //side = 3 - side;
         return false;
       }
       side = 3 - side;
-      drawBoard();
+      drawBoard(); // TODO: move from here
       return true;
     }
 
@@ -193,42 +195,55 @@
       liberties = [];
     }
 
-    // file:///home/cmk/Desktop/bmgp/bmgp.htmlSearch move
+    // Search move
     function search(depth) {
+      if (!depth) {
+        return
+      }
       // Loop over the board squares
       for (let sq = 0; sq < size ** 2; sq++) {
-        // Skip offboard squares
         if (board[sq]) continue;
-
-        // Preserve board position
         old_board = JSON.stringify(board);
         old_side = side;
         old_ko = ko;
-        
+ 
         // Make move
-        if (setStone(sq, side, false))
-          // Search recursively
+        if (setStone(sq, side, false)) {
           printPosition();
+          console.log("depth: " + depth)
+
+          search(depth-1);
+        } 
 
         // Take back
         board = JSON.parse(old_board);
-        side = old_side;
+        side = 3-side;//old_side;
         ko = old_ko;
+        // printPosition()
+
       }
     }
 
+    //function sleep(ms) {
+    //  const start = new Date().getTime();
+    //  let currentTime = start;
+    //  while (currentTime - start < ms) {
+    //    currentTime = new Date().getTime();
+    //  }
+    //}
+
     // Main
-    //initBoard();
-    board = [
-      7, 7, 7, 7, 7, 7, 7,
-      7, 1, 1, 0, 2, 2, 7,
-      7, 1, 0, 1, 2, 0, 7,
-      7, 0, 1, 2, 0, 2, 7,
-      7, 0, 0, 1, 2, 0, 7,
-      7, 0, 2, 1, 0, 0, 7,
-      7, 7, 7, 7, 7, 7, 7
-    ]; ko = 25; side = BLACK;
-    search();
+    initBoard();
+   //board = [
+   //  7, 7, 7, 7, 7, 7, 7,
+   //  7, 1, 1, 0, 2, 2, 7,
+   //  7, 1, 0, 1, 2, 0, 7,
+   //  7, 0, 1, 2, 0, 2, 7,
+   //  7, 0, 0, 1, 2, 0, 7,
+   //  7, 0, 2, 1, 0, 0, 7,
+   //  7, 7, 7, 7, 7, 7, 7
+   //]; ko = 25; side = BLACK;
+    search(2);
     //printPosition();
     drawBoard();
   </script>
