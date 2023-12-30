@@ -36,8 +36,8 @@
     // Go board
     var board = [];
 
-    // 5x5 board, +2 is offboard
-    var size = 7;
+    // NxN board; size = N (+2 is offboard)
+    var size = 6;
 
     // Side to move
     var side = BLACK;
@@ -47,7 +47,10 @@
     var block = [];
     var points_side = [];
     var points_count = [];
+
+    // Mics
     var ko = EMPTY;
+    var bestMove = EMPTY;
 
     // Rendered cell size
     const cell = canvas.width / size;
@@ -102,11 +105,26 @@
       if (board[sq] == OFFBOARD) return;
       setStone(sq, side, true);
       drawBoard();
-      let scorePosition = score();
-      console.log("Black: " + scorePosition[1])
-      console.log("White: " + scorePosition[2])
-      console.log("Empty: " + scorePosition[0])
+      play(3);
     });
+
+    // Engine plays move
+    function play(depth) {
+      setTimeout(function() {
+        let eval = search(depth);
+        console.log("Eval: " + eval);
+        let oldSide = side;
+        setStone(bestMove, side, false);
+        if (side == oldSide) {
+          side = 3 - side;
+          alert("Pass");
+        } drawBoard();
+        let scorePosition = score();
+        console.log("Black: " + scorePosition[1])
+        console.log("White: " + scorePosition[2])
+        console.log("Empty: " + scorePosition[0])
+      }, 0);
+    }
 
     // Put stone on board
     function setStone(sq, color, user) {
@@ -234,56 +252,37 @@
     // Search move
     function search(depth) {
       if (!depth) {
-        return
-      }
-      // Loop over the board squares
+        let points = score();
+        let eval = points[1] - points[2];
+        return (side == 1) ? eval : -eval;
+      } let bestScore = -10000;
       for (let sq = 0; sq < size ** 2; sq++) {
         if (board[sq]) continue;
-
         let oldBoard = JSON.stringify(board);
         let oldSide = side;
         let oldKo = ko;
- 
-        // Make move
-        if (setStone(sq, side, false)) {
-          console.log("make move:");
-          console.log("depth: " + depth)
-          printPosition();
-
-          search(depth-1);
-        } 
-
-        // Take back
-        board = JSON.parse(oldBoard);
+        if (!setStone(sq, side, false)) continue;
+        let eval = -search(depth-1);
+        if (eval > bestScore) {
+          bestScore = eval;
+          bestMove = sq;
+        } board = JSON.parse(oldBoard);
         side = oldSide;
         ko = oldKo;
-       //console.log("take back:");
-       //console.log("depth: " + depth)
-       //printPosition()
-
-      }
+      } return bestScore;
     }
-
-    //function sleep(ms) {
-    //  const start = new Date().getTime();
-    //  let currentTime = start;
-    //  while (currentTime - start < ms) {
-    //    currentTime = new Date().getTime();
-    //  }
-    //}
 
     // Main
     initBoard();
-    //board = [
-    //  7, 7, 7, 7, 7, 7, 7,
-    //  7, 1, 1, 0, 2, 2, 7,
-    //  7, 1, 0, 1, 2, 0, 7,
-    //  7, 0, 1, 2, 0, 2, 7,
-    //  7, 0, 0, 1, 2, 0, 7,
-    //  7, 0, 2, 1, 0, 0, 7,
-    //  7, 7, 7, 7, 7, 7, 7
-    //]; ko = 25; side = BLACK;
-    //search(2);
+   //board = [
+   //  7, 7, 7, 7, 7, 7,
+   //  7, 0, 0, 0, 0, 7,
+   //  7, 1, 0, 0, 0, 7,
+   //  7, 0, 0, 0, 0, 7,
+   //  7, 0, 0, 0, 0, 7,
+   //  7, 7, 7, 7, 7, 7
+   //]; ko = 0; side = WHITE;
+   //search(3);
     drawBoard();
   </script>
 </body>
