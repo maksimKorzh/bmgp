@@ -37,7 +37,7 @@
     var board = [];
 
     // NxN board; size = N (+2 is offboard)
-    var size = 6;
+    var size = 11;
 
     // Side to move
     var side = BLACK;
@@ -105,25 +105,23 @@
       if (board[sq] == OFFBOARD) return;
       setStone(sq, side, true);
       drawBoard();
-      play(3);
+      setTimeout(function() { play(3); }, 0);
     });
 
     // Engine plays move
     function play(depth) {
-      setTimeout(function() {
-        let eval = search(depth);
-        console.log("Eval: " + eval);
-        let oldSide = side;
-        setStone(bestMove, side, false);
-        if (side == oldSide) {
-          side = 3 - side;
-          alert("Pass");
-        } drawBoard();
-        let scorePosition = score();
-        console.log("Black: " + scorePosition[1])
-        console.log("White: " + scorePosition[2])
-        console.log("Empty: " + scorePosition[0])
-      }, 0);
+      let eval = search(depth);
+      console.log("Eval: " + eval);
+      let oldSide = side;
+      setStone(bestMove, side, false);
+      if (side == oldSide) {
+        side = 3 - side;
+        alert("Pass " + bestMove);
+      } drawBoard();
+      let scorePosition = score();
+      console.log("Black: " + scorePosition[1])
+      console.log("White: " + scorePosition[2])
+      console.log("Empty: " + scorePosition[0])
     }
 
     // Put stone on board
@@ -254,7 +252,11 @@
       if (!depth) {
         let points = score();
         let eval = points[1] - points[2];
-        return (side == 1) ? eval : -eval;
+        for (let sq = 0; sq < size ** 2; sq++) {
+          if (!board[sq] || board[sq] == OFFBOARD) continue;
+          eval += (board[sq] == BLACK) ? strategy[sq] : -strategy[sq];
+        }
+        return (side == BLACK) ? eval : -eval;
       } let bestScore = -10000;
       for (let sq = 0; sq < size ** 2; sq++) {
         if (board[sq]) continue;
@@ -271,6 +273,20 @@
         ko = oldKo;
       } return bestScore;
     }
+    
+    var strategy = [
+      7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,
+      7, -5, -4, -3, -2, -1, -2, -3, -4, -5,  7,
+      7, -4,  0,  0,  0,  0,  0,  0,  0, -4,  7,
+      7, -3,  0,  0,  5,  4,  5,  0,  0, -3,  7,
+      7, -2,  0,  4,  0,  0,  0,  4,  0, -2,  7,
+      7, -1,  0,  5,  0,  5,  0,  5,  0, -1,  7,
+      7, -2,  0,  4,  0,  0,  0,  4,  0, -2,  7,
+      7, -3,  0,  0,  5,  4,  5,  0,  0, -3,  7,
+      7, -4,  0,  0,  0,  0,  0,  0,  0, -4,  7,
+      7, -5, -4, -3, -2, -1, -2, -3, -4, -5,  7,
+      7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7
+    ];
 
     // Main
     initBoard();
