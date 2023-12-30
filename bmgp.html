@@ -45,6 +45,8 @@
     // Count liberties & blocks
     var liberties = [];
     var block = [];
+    var points_side = [];
+    var points_count = [];
     var ko = EMPTY;
 
     // Rendered cell size
@@ -57,7 +59,7 @@
         position += (!(sq % size)) ? "\n" : "";
         position += board[sq] + " ";
       };console.log(position);
-      console.log(side);
+      console.log("Side to move: " + (side == 1 ? "black" : "white"));
     }
 
     // Print board
@@ -97,7 +99,13 @@
       let col = Math.floor(mouseX / cell);
       let row = Math.floor(mouseY / cell);
       let sq = row * size + col;
+      if (board[sq] == OFFBOARD) return;
       setStone(sq, side, true);
+      drawBoard();
+      let scorePosition = score();
+      console.log("Black: " + scorePosition[1])
+      console.log("White: " + scorePosition[2])
+      console.log("Empty: " + scorePosition[0])
     });
 
     // Put stone on board
@@ -108,10 +116,8 @@
       } else if (sq == ko) {
         if (user) alert("Ko!");
         return false;
-      }
-      let old_ko = ko;
+      } let old_ko = ko;
       ko = EMPTY;
-      
       board[sq] = color;
       captures(3 - color);
       count(sq, color);
@@ -121,11 +127,8 @@
         board[sq] = EMPTY;
         ko = old_ko;
         if (user) alert("Suicide move!");
-        //side = 3 - side;
         return false;
-      }
-      side = 3 - side;
-      drawBoard(); // TODO: move from here
+      } side = 3 - side;
       return true;
     }
 
@@ -193,6 +196,39 @@
     function clearGroups() {
       block = [];
       liberties = [];
+      points_side = [];
+    }
+
+    // Count territory territory
+    function territory(sq) {
+      stone = board[sq];
+      if (stone == OFFBOARD) return OFFBOARD;
+      if (stone == EMPTY) {
+        block.push(sq);
+        points_count.push(sq);
+        board[sq] |= MARKER;
+        territory(sq - size);
+        territory(sq - 1);
+        territory(sq + size);
+        territory(sq + 1);
+      } else if (stone != MARKER) {
+        points_side.push(stone);
+      } if (!points_side.length) return [EMPTY, points_count.length];
+      else if (points_side.every((element) => element === points_side[0])) return [points_side[0], points_count.length];
+      else return [EMPTY, points_count.length];
+    }
+
+    // Evaluate position
+    function score() {
+      let scorePosition = [0, 0, 0];
+      for (let sq = 0; sq < size ** 2; sq++) {
+        if (board[sq]) continue;
+        let result = territory(sq);
+        scorePosition[result[0]] += result[1];
+        points_side = [];
+        points_count = [];
+      } restoreBoard();
+      return scorePosition;
     }
 
     // Search move
@@ -203,23 +239,27 @@
       // Loop over the board squares
       for (let sq = 0; sq < size ** 2; sq++) {
         if (board[sq]) continue;
-        old_board = JSON.stringify(board);
-        old_side = side;
-        old_ko = ko;
+
+        let oldBoard = JSON.stringify(board);
+        let oldSide = side;
+        let oldKo = ko;
  
         // Make move
         if (setStone(sq, side, false)) {
-          printPosition();
+          console.log("make move:");
           console.log("depth: " + depth)
+          printPosition();
 
           search(depth-1);
         } 
 
         // Take back
-        board = JSON.parse(old_board);
-        side = 3-side;//old_side;
-        ko = old_ko;
-        // printPosition()
+        board = JSON.parse(oldBoard);
+        side = oldSide;
+        ko = oldKo;
+       //console.log("take back:");
+       //console.log("depth: " + depth)
+       //printPosition()
 
       }
     }
@@ -234,17 +274,16 @@
 
     // Main
     initBoard();
-   //board = [
-   //  7, 7, 7, 7, 7, 7, 7,
-   //  7, 1, 1, 0, 2, 2, 7,
-   //  7, 1, 0, 1, 2, 0, 7,
-   //  7, 0, 1, 2, 0, 2, 7,
-   //  7, 0, 0, 1, 2, 0, 7,
-   //  7, 0, 2, 1, 0, 0, 7,
-   //  7, 7, 7, 7, 7, 7, 7
-   //]; ko = 25; side = BLACK;
-    search(2);
-    //printPosition();
+    //board = [
+    //  7, 7, 7, 7, 7, 7, 7,
+    //  7, 1, 1, 0, 2, 2, 7,
+    //  7, 1, 0, 1, 2, 0, 7,
+    //  7, 0, 1, 2, 0, 2, 7,
+    //  7, 0, 0, 1, 2, 0, 7,
+    //  7, 0, 2, 1, 0, 0, 7,
+    //  7, 7, 7, 7, 7, 7, 7
+    //]; ko = 25; side = BLACK;
+    //search(2);
     drawBoard();
   </script>
 </body>
