@@ -48,6 +48,9 @@
     var points_side = [];
     var points_count = [];
 
+    // Captured stones
+    var prisoners = [0, 0];
+
     // Mics
     var ko = EMPTY;
     var bestMove = EMPTY;
@@ -102,26 +105,23 @@
       let col = Math.floor(mouseX / cell);
       let row = Math.floor(mouseY / cell);
       let sq = row * size + col;
-      if (board[sq] == OFFBOARD) return;
-      setStone(sq, side, true);
+      if (board[sq]) return;
+      if (!setStone(sq, side, true)) return;
       drawBoard();
-      setTimeout(function() { play(3); }, 0);
+      setTimeout(function() { play(1); }, 10);
     });
 
     // Engine plays move
     function play(depth) {
       let eval = search(depth);
-      console.log("Eval: " + eval);
+      if (eval == -10000) {
+        alert("Pass");
+        return;
+      } console.log("Eval: " + eval);
       let oldSide = side;
-      setStone(bestMove, side, false);
-      if (side == oldSide) {
-        side = 3 - side;
-        alert("Pass " + bestMove);
-      } drawBoard();
+      if (!setStone(bestMove, side, false)) play(depth-1);
+      drawBoard();
       let scorePosition = score();
-      console.log("Black: " + scorePosition[1])
-      console.log("White: " + scorePosition[2])
-      console.log("Empty: " + scorePosition[0])
     }
 
     // Put stone on board
@@ -247,19 +247,28 @@
       return scorePosition;
     }
 
+    // Evaluate position
+    function evaluate() {
+      let points = score();
+      let eval = points[1] - points[2];
+      for (let sq = 0; sq < size ** 2; sq++) {
+        if (!board[sq] || board[sq] == OFFBOARD) continue;
+        if (board[sq] == BLACK) eval += 1
+        if (board[sq] == WHITE) eval -= 1
+        count(sq, board[sq]);
+        if (board[sq]-MARKER == BLACK) eval += liberties.length;
+        if (board[sq]-MARKER == WHITE) eval -= liberties.length;
+        restoreBoard()
+      } return (side == BLACK) ? eval : -eval;
+    }
+
     // Search move
     function search(depth) {
-      if (!depth) {
-        let points = score();
-        let eval = points[1] - points[2];
-        for (let sq = 0; sq < size ** 2; sq++) {
-          if (!board[sq] || board[sq] == OFFBOARD) continue;
-          eval += (board[sq] == BLACK) ? strategy[sq] : -strategy[sq];
-        }
-        return (side == BLACK) ? eval : -eval;
-      } let bestScore = -10000;
+      if (!depth) return evaluate();
+      let bestScore = -10000;
       for (let sq = 0; sq < size ** 2; sq++) {
         if (board[sq]) continue;
+        if (sq == ko) continue;
         let oldBoard = JSON.stringify(board);
         let oldSide = side;
         let oldKo = ko;
@@ -274,22 +283,14 @@
       } return bestScore;
     }
     
-    var strategy = [
-      7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7,
-      7, -5, -4, -3, -2, -1, -2, -3, -4, -5,  7,
-      7, -4,  0,  0,  0,  0,  0,  0,  0, -4,  7,
-      7, -3,  0,  0,  5,  4,  5,  0,  0, -3,  7,
-      7, -2,  0,  4,  0,  0,  0,  4,  0, -2,  7,
-      7, -1,  0,  5,  0,  5,  0,  5,  0, -1,  7,
-      7, -2,  0,  4,  0,  0,  0,  4,  0, -2,  7,
-      7, -3,  0,  0,  5,  4,  5,  0,  0, -3,  7,
-      7, -4,  0,  0,  0,  0,  0,  0,  0, -4,  7,
-      7, -5, -4, -3, -2, -1, -2, -3, -4, -5,  7,
-      7,  7,  7,  7,  7,  7,  7,  7,  7,  7,  7
-    ];
-
     // Main
     initBoard();
+   //board = [
+   //  7, 7 ,7, 7,
+   //  7, 0, 1, 7,
+   //  7, 1, 1, 7,
+   //  7, 7, 7, 7
+   //]
    //board = [
    //  7, 7, 7, 7, 7, 7,
    //  7, 0, 0, 0, 0, 7,
