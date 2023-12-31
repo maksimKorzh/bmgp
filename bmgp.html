@@ -37,7 +37,7 @@
     var board = [];
 
     // NxN board; size = N (+2 is offboard)
-    var size = 11;
+    var size = 21;
 
     // Side to move
     var side = BLACK;
@@ -108,7 +108,7 @@
       if (board[sq]) return;
       if (!setStone(sq, side, true)) return;
       drawBoard();
-      setTimeout(function() { play(1); }, 10);
+      //setTimeout(function() { play(1); }, 10);
     });
 
     // Engine plays move
@@ -251,15 +251,25 @@
     function evaluate() {
       let points = score();
       let eval = points[1] - points[2];
+      let blackStones = 0;
+      let whiteStones = 0;
+      let blackLiberties = 0;
+      let whiteLiberties = 0;
       for (let sq = 0; sq < size ** 2; sq++) {
         if (!board[sq] || board[sq] == OFFBOARD) continue;
-        if (board[sq] == BLACK) eval += 1
-        if (board[sq] == WHITE) eval -= 1
+        if (board[sq] == BLACK) blackStones += 1;
+        if (board[sq] == WHITE) whiteStones += 1;
         count(sq, board[sq]);
-        if (board[sq]-MARKER == BLACK) eval += liberties.length;
-        if (board[sq]-MARKER == WHITE) eval -= liberties.length;
-        restoreBoard()
-      } return (side == BLACK) ? eval : -eval;
+        if (board[sq]-MARKER == BLACK) blackLiberties += liberties.length;
+        if (board[sq]-MARKER == WHITE) whiteLiberties += liberties.length;
+        restoreBoard();
+      } eval += blackStones - whiteStones;
+      //eval += blackLiberties - whiteLiberties;
+      //if (blackLiberties == whiteLiberties) {
+      //  let direction = Math.random();
+      //  eval += (side == BLACK) ? direction : -direction;
+      //}
+      return (side == BLACK) ? eval : -eval;
     }
 
     // Search move
