@@ -37,7 +37,7 @@
     var board = [];
 
     // NxN board; size = N (+2 is offboard)
-    var size = 21;
+    var size = 11;
 
     // Side to move
     var side = BLACK;
@@ -48,15 +48,27 @@
     var points_side = [];
     var points_count = [];
 
-    // Captured stones
-    var prisoners = [0, 0];
-
-    // Mics
+    // Misc
     var ko = EMPTY;
     var bestMove = EMPTY;
+    var isCapture = false;
 
     // Rendered cell size
     const cell = canvas.width / size;
+
+    // Handle mouse click event
+    canvas.addEventListener('click', function (event) {
+      let rect = canvas.getBoundingClientRect();
+      let mouseX = event.clientX - rect.left;
+      let mouseY = event.clientY - rect.top;
+      let col = Math.floor(mouseX / cell);
+      let row = Math.floor(mouseY / cell);
+      let sq = row * size + col;
+      if (board[sq]) return;
+      if (!setStone(sq, side, true)) return;
+      drawBoard();
+      setTimeout(function() { play(2); }, 10);
+    });
 
     // Print position to console
     function printPosition() {
@@ -97,27 +109,22 @@
       }
     }
 
-    // Handle mouse click event
-    canvas.addEventListener('click', function (event) {
-      let rect = canvas.getBoundingClientRect();
-      let mouseX = event.clientX - rect.left;
-      let mouseY = event.clientY - rect.top;
-      let col = Math.floor(mouseX / cell);
-      let row = Math.floor(mouseY / cell);
-      let sq = row * size + col;
-      if (board[sq]) return;
-      if (!setStone(sq, side, true)) return;
-      drawBoard();
-      //setTimeout(function() { play(1); }, 10);
-    });
-
     // Engine plays move
     function play(depth) {
-      let eval = search(depth);
+      isCapture = false;
+      let quickScore = search(1);
+      let canCapture = isCapture;
+      let bestQuick = bestMove;
+      let eval = 0; 
+      if (canCapture) {
+        eval = quickScore;
+        bestMove = bestQuick;
+      } else eval = search(depth);
       if (eval == -10000) {
         alert("Pass");
+        side = 3 - side;
         return;
-      } console.log("Eval: " + eval);
+      } console.log("Eval: " + eval + " " + quickScore);
       let oldSide = side;
       if (!setStone(bestMove, side, false)) play(depth-1);
       drawBoard();
@@ -203,6 +210,7 @@
 
     // Remove captured stones
     function clearBlock() {
+      isCapture = true;
       if (block.length == 1) ko = block[0];
       for (let i = 0; i < block.length; i++)
         board[block[i]] = EMPTY;
@@ -257,19 +265,18 @@
       let whiteLiberties = 0;
       for (let sq = 0; sq < size ** 2; sq++) {
         if (!board[sq] || board[sq] == OFFBOARD) continue;
-        if (board[sq] == BLACK) blackStones += 1;
-        if (board[sq] == WHITE) whiteStones += 1;
+        if (board[sq] == BLACK) blackStones += 1 + strategy[sq]*5;
+        if (board[sq] == WHITE) whiteStones += 1 + strategy[sq]*5;
         count(sq, board[sq]);
         if (board[sq]-MARKER == BLACK) blackLiberties += liberties.length;
         if (board[sq]-MARKER == WHITE) whiteLiberties += liberties.length;
         restoreBoard();
-      } eval += blackStones - whiteStones;
-      //eval += blackLiberties - whiteLiberties;
-      //if (blackLiberties == whiteLiberties) {
-      //  let direction = Math.random();
-      //  eval += (side == BLACK) ? direction : -direction;
-      //}
-      return (side == BLACK) ? eval : -eval;
+      } eval += (blackStones - whiteStones);
+      eval += blackLiberties - whiteLiberties;
+      if (points[1] == points[2]) {
+        let direction = Math.random() * 2;
+        eval += (side == BLACK) ? direction : -direction;
+      } return (side == BLACK) ? eval : -eval;
     }
 
     // Search move
@@ -295,21 +302,19 @@
     
     // Main
     initBoard();
-   //board = [
-   //  7, 7 ,7, 7,
-   //  7, 0, 1, 7,
-   //  7, 1, 1, 7,
-   //  7, 7, 7, 7
-   //]
-   //board = [
-   //  7, 7, 7, 7, 7, 7,
-   //  7, 0, 0, 0, 0, 7,
-   //  7, 1, 0, 0, 0, 7,
-   //  7, 0, 0, 0, 0, 7,
-   //  7, 0, 0, 0, 0, 7,
-   //  7, 7, 7, 7, 7, 7
-   //]; ko = 0; side = WHITE;
-   //search(3);
+    var strategy = [
+      7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+      7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,
+      7, 0, 0, 0, 0, 1, 0, 0, 0, 0, 7,
+      7, 0, 0, 1, 0, 0, 0, 1, 0, 0, 7,
+      7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,
+      7, 0, 1, 0, 0, 0, 0, 0, 1, 0, 7,
+      7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,
+      7, 0, 0, 1, 0, 0, 0, 1, 0, 0, 7,
+      7, 0, 0, 0, 0, 1, 0, 0, 0, 0, 7,
+      7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,
+      7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+    ];
     drawBoard();
   </script>
 </body>
