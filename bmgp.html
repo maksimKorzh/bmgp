@@ -70,6 +70,21 @@
       setTimeout(function() { play(2); }, 10);
     });
 
+    // Init board
+    function initBoard() {
+      for (let sq = 0; sq < size ** 2; sq++) {
+        switch (true) {
+          case (sq < size):
+          case (sq >= (size ** 2 - size)):
+          case (!(sq % size)):
+            board[sq] = OFFBOARD;
+            board[sq-1] = OFFBOARD;
+            break;
+          default: board[sq] = 0;
+        }
+      }
+    }
+
     // Print position to console
     function printPosition() {
       let position = "";
@@ -109,28 +124,6 @@
       }
     }
 
-    // Engine plays move
-    function play(depth) {
-      isCapture = false;
-      let quickScore = search(1);
-      let canCapture = isCapture;
-      let bestQuick = bestMove;
-      let eval = 0; 
-      if (canCapture) {
-        eval = quickScore;
-        bestMove = bestQuick;
-      } else eval = search(depth);
-      if (eval == -10000) {
-        alert("Pass");
-        side = 3 - side;
-        return;
-      } console.log("Eval: " + eval + " " + quickScore);
-      let oldSide = side;
-      if (!setStone(bestMove, side, false)) play(depth-1);
-      drawBoard();
-      let scorePosition = score();
-    }
-
     // Put stone on board
     function setStone(sq, color, user) {
       if (board[sq] != EMPTY) {
@@ -153,21 +146,6 @@
         return false;
       } side = 3 - side;
       return true;
-    }
-
-    // Init board
-    function initBoard() {
-      for (let sq = 0; sq < size ** 2; sq++) {
-        switch (true) {
-          case (sq < size):
-          case (sq >= (size ** 2 - size)):
-          case (!(sq % size)):
-            board[sq] = OFFBOARD;
-            board[sq-1] = OFFBOARD;
-            break;
-          default: board[sq] = 0;
-        }
-      }
     }
 
     // Handle captures
@@ -265,8 +243,8 @@
       let whiteLiberties = 0;
       for (let sq = 0; sq < size ** 2; sq++) {
         if (!board[sq] || board[sq] == OFFBOARD) continue;
-        if (board[sq] == BLACK) blackStones += 1 + strategy[sq]*5;
-        if (board[sq] == WHITE) whiteStones += 1 + strategy[sq]*5;
+        if (board[sq] == BLACK) blackStones += 1 + Math.abs(board.length / 2) * 5;
+        if (board[sq] == WHITE) whiteStones += 1 + Math.abs(board.length / 2) * 5;
         count(sq, board[sq]);
         if (board[sq]-MARKER == BLACK) blackLiberties += liberties.length;
         if (board[sq]-MARKER == WHITE) whiteLiberties += liberties.length;
@@ -299,22 +277,31 @@
         ko = oldKo;
       } return bestScore;
     }
-    
+ 
+    // Engine plays move
+    function play(depth) {
+      isCapture = false;
+      let quickScore = search(1);
+      let canCapture = isCapture;
+      let bestQuick = bestMove;
+      let eval = 0; 
+      if (canCapture) {
+        eval = quickScore;
+        bestMove = bestQuick;
+      } else eval = search(depth);
+      if (eval == -10000) {
+        alert("Pass");
+        side = 3 - side;
+        return;
+      } console.log("Eval: " + eval + " " + quickScore);
+      let oldSide = side;
+      if (!setStone(bestMove, side, false)) play(depth-1);
+      drawBoard();
+      let scorePosition = score();
+    }
+
     // Main
     initBoard();
-    var strategy = [
-      7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-      7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,
-      7, 0, 0, 0, 0, 1, 0, 0, 0, 0, 7,
-      7, 0, 0, 1, 0, 0, 0, 1, 0, 0, 7,
-      7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,
-      7, 0, 1, 0, 0, 0, 0, 0, 1, 0, 7,
-      7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,
-      7, 0, 0, 1, 0, 0, 0, 1, 0, 0, 7,
-      7, 0, 0, 0, 0, 1, 0, 0, 0, 0, 7,
-      7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7,
-      7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-    ];
     drawBoard();
   </script>
 </body>
