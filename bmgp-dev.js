@@ -58,10 +58,10 @@ function getNeighbors(square) { return [square-1, square+1, square-(size+2), squ
 function setStone(board, square, stone) { return board.slice(0, square) + stone + board.slice(square + 1); }
 function moveToSquare(x, y) { return y*(size+2)+ x; }
 
-function Position(board, capture, moves, ko, komi) {
+function Position(board, captures, moves, ko, komi) {
   return {
   "board": board,
-  "capture": capture,
+  "captures": captures,
   "moves": moves,
   "ko": ko,
   "komi": komi
@@ -69,12 +69,26 @@ function Position(board, capture, moves, ko, komi) {
 }
 
 function initBoard() {
-  let empty = [
-    ...Array(size+2)].map((_, i) => i === 0 ?
+  let empty = [...Array(size+2)].map((_, i) => i === 0 ?
       ' '.repeat(size + 1) : i === size + 1 ?
         ' '.repeat(size + 2) : ' ' +
         '.'.repeat(size)).join('\n');
   return Position(empty, [0, 0], 0, null, komi=7.5);
+}
+
+function isEyeish(board, square) {
+  let eyecolor = null;
+  let othercolor;
+  const neighbors = getNeighbors(square);
+  for (let neighbor of neighbors) {
+    if (board[neighbor].trim() === "") continue;
+    if (board[neighbor] === '.') return null;
+    if (eyecolor === null) {
+      eyecolor = board[neighbor];
+      othercolor = eyecolor === eyecolor.toUpperCase() ? eyecolor.toLowerCase() : eyecolor.toUpperCase();
+    } else if (board[neighbor] === othercolor) return null;
+  }
+  return eyecolor;
 }
 
 function floodfill(board, square) {
@@ -100,12 +114,11 @@ function contact(board, color) {
 }
 
 function makeMove(position, square) {
+  if (position.board[square] != ".") return null;
   if (square == position.ko) return null;
-  //# Are we trying to play in enemy's eye?
-  //in_enemy_eye = is_eyeish(self.board, c) == 'x'
+  let inEnemyEye = (isEyeish(position.board, square) == 'x');
   let board = setStone(position.board, square, 'X');
-  // Test for captures, and track ko
-  captureX = position.capture[0];
+  captureX = position.captures[0];
   singleCaptures = [];
   for (let neighbor of getNeighbors(square)) {
     if (board[neighbor] != "x") continue;
@@ -117,18 +130,10 @@ function makeMove(position, square) {
     captureX += capture_count;
     board = floodfill_board.split("#").join(".");
   }
-
-
-//# Set ko
-//ko = singlecaps[0] if in_enemy_eye and len(singlecaps) == 1 else None
-//# Test for suicide
-//if contact(floodfill(board, c), '.') is None:
-//    return None
-//
-//# Update
-
-  board = board.split('').map(c => c === c.toUpperCase() ? c.toLowerCase() : c.toUpperCase()).join('');
-  return Position(board, [0,0], position.moves+1, null, 7.5);
+  let ko = (inEnemyEye && singleCaptures.length) ? singleCaptures[0] : null; 
+  if (contact(floodfill(board, square), ".") == null) return null;
+  board = board.split('').map(c => c == c.toUpperCase() ? c.toLowerCase() : c.toUpperCase()).join('');
+  return Position(board, [position.captures[1], captureX], position.moves+1, ko, 7.5);
 }
 
 // MAIN
@@ -139,9 +144,9 @@ function userInput(event) {
   let mouseY = event.clientY - rect.top;
   let col = Math.floor(mouseX / cell);
   let row = Math.floor(mouseY / cell);
-  position = makeMove(position, moveToSquare(col, row));
-  //if (board[sq]) return;
-  //if (!setStone(sq, side, true)) return;
+  let isLegal = makeMove(position, moveToSquare(col, row))
+  if (isLegal != null) position = isLegal;
+  console.log(position);
   drawBoard(position);
   //setTimeout(function() { play(2); }, 10);
 }
