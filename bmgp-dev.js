@@ -37,7 +37,24 @@ function drawBoard(position) {
 }
 
 // ENGINE
+const contactRegexes = {};
+const regexSources = {
+  '.': '\\.',
+  'x': 'x',
+  'X': 'X'
+};
 
+for (let color in regexSources) {
+  const regexPattern = regexSources[color];
+  const contactRegexSources = [
+    `#${regexPattern}`,                             // color at right
+    `${regexPattern}#`,                             // color at left
+    `#${'.'.repeat((size+2) - 1)}${regexPattern}`,  // color below
+    `${regexPattern}${'.'.repeat((size+2) - 1)}#`   // color above
+  ]; contactRegexes[color] = new RegExp(contactRegexSources.join('|'), 's');
+}
+
+function getNeighbors(square) { return [square-1, square+1, square-(size+2), square+(size+2)]; }
 function setStone(board, square, stone) { return board.slice(0, square) + stone + board.slice(square + 1); }
 function moveToSquare(x, y) { return y*(size+2)+ x; }
 
@@ -60,29 +77,48 @@ function initBoard() {
   return Position(empty, [0, 0], 0, null, komi=7.5);
 }
 
+function floodfill(board, square) {
+  let byteboard = new Uint8Array(board.split('').map(char => char.charCodeAt(0)));
+  let color = byteboard[square];
+  byteboard[square] = '#'.charCodeAt(0);
+  let fringe = [square];
+  while (fringe.length > 0) {
+    square = fringe.pop();
+    for (let neighbor of getNeighbors(square)) {
+      if (byteboard[neighbor] == color) {
+        byteboard[neighbor] = '#'.charCodeAt(0);
+        fringe.push(neighbor);
+      }
+    }
+  };return String.fromCharCode.apply(null, byteboard);
+}
+
+function contact(board, color) {
+  const match = board.match(contactRegexes[color]);
+  if (!match) return null;
+  return match.index;
+}
+
 function makeMove(position, square) {
   if (square == position.ko) return null;
   //# Are we trying to play in enemy's eye?
   //in_enemy_eye = is_eyeish(self.board, c) == 'x'
   let board = setStone(position.board, square, 'X');
-//# Test for captures, and track ko
-//capX = self.cap[0]
-//singlecaps = []
-//for d in neighbors(c):
-//    if board[d] != 'x':
-//        continue
-//    # XXX: The following is an extremely naive and SLOW approach
-//    # at things - to do it properly, we should maintain some per-group
-//    # data structures tracking liberties.
-//    fboard = floodfill(board, d)  # get a board with the adjecent group replaced by '#'
-//    if contact(fboard, '.') is not None:
-//        continue  # some liberties left
-//    # no liberties left for this group, remove the stones!
-//    capcount = fboard.count('#')
-//    if capcount == 1:
-//        singlecaps.append(d)
-//    capX += capcount
-//    board = fboard.replace('#', '.')  # capture the group
+  // Test for captures, and track ko
+  captureX = position.capture[0];
+  singleCaptures = [];
+  for (let neighbor of getNeighbors(square)) {
+    if (board[neighbor] != "x") continue;
+    floodfill_board = floodfill(board, neighbor)  // get a board with the adjecent group replaced by '#'
+    console.log(floodfill_board);
+    if (contact(floodfill_board, '.') != null) continue;
+    capture_count = floodfill_board.split('#').length - 1;
+    if (capture_count == 1) singleCaptures.push(neighbor);
+    captureX += capture_count;
+    board = floodfill_board.split("#").join(".");
+  }
+
+
 //# Set ko
 //ko = singlecaps[0] if in_enemy_eye and len(singlecaps) == 1 else None
 //# Test for suicide
