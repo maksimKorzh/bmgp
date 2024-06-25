@@ -151,6 +151,5 @@ function userInput(event) {
   //setTimeout(function() { play(2); }, 10);
 }
 
-
 let position = initBoard();
 drawBoard(position);
