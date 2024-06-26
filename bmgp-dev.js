@@ -33,6 +33,37 @@ var isCapture = false;
 // Rendered cell size
 var cell = canvas.width / size;
 
+function generateHeatmap(boardSize) {
+    const heatmap = new Array(boardSize * boardSize).fill(0);
+
+    // Function to calculate heatmap values
+    const calculateValue = (x, y) => {
+        const center = Math.floor(boardSize / 2);
+        const distanceFromEdge = Math.min(x, y, boardSize - 1 - x, boardSize - 1 - y);
+        const distanceFromCenter = Math.abs(center - x) + Math.abs(center - y);
+        
+        // Invert the values so that corners are higher and center is lower
+        return distanceFromEdge + Math.max(center - distanceFromCenter, 0);
+    };
+
+    for (let i = 0; i < boardSize; i++) {
+        for (let j = 0; j < boardSize; j++) {
+            heatmap[i * boardSize + j] = calculateValue(i, j);
+        }
+    }
+
+    return heatmap;
+}
+
+// Example usage
+const boardSize = 19;
+const heatmap = generateHeatmap(boardSize);
+
+// Output the heatmap in a readable format
+for (let i = 0; i < boardSize; i++) {
+    console.log(heatmap.slice(i * boardSize, (i + 1) * boardSize).join(' '));
+}
+
 // Change board size
 var selectSize = document.getElementById("size");
 selectSize.addEventListener("change", function() {
@@ -55,7 +86,7 @@ canvas.addEventListener('click', function (event) {
   if (board[sq]) return;
   if (!setStone(sq, side, true)) return;
   drawBoard();
-  //setTimeout(function() { play(2); }, 10);
+  setTimeout(function() { play(4); }, 10);
 });
 
 // Init board
@@ -258,11 +289,24 @@ function evaluate() {
   } return (side == BLACK) ? eval : -eval;
 }
 
+// Find moves to kill/save groups
+function getUrgentMoves() {
+  let urgent = [];
+  for (let sq = 0; sq < size ** 2; sq++) {
+    count(sq, board[sq]);
+    if (liberties.length < 3) {
+      if (board[sq]-MARKER == BLACK) for (let sq of liberties) urgent.push(sq);
+      if (board[sq]-MARKER == WHITE) for (let sq of liberties) urgent.push(sq);
+    }
+    restoreBoard();
+  };return urgent;
+}
+
 // Search move
 function search(depth) {
   if (!depth) return evaluate();
   let bestScore = -10000;
-  for (let sq = 0; sq < size ** 2; sq++) {
+  for (let sq of getUrgentMoves()) {
     if (board[sq]) continue;
     if (sq == ko) continue;
     let oldBoard = JSON.stringify(board);
@@ -276,7 +320,8 @@ function search(depth) {
     } board = JSON.parse(oldBoard);
     side = oldSide;
     ko = oldKo;
-  } return bestScore;
+  }
+  return bestScore;
 }
 
 // Engine plays move
@@ -291,8 +336,9 @@ function play(depth) {
     bestMove = bestQuick;
   } else eval = search(depth);
   if (eval == -10000) {
-    alert("Pass");
-    side = 3 - side;
+   // console.log("moves to search:" + getUrgentMoves()[side].length + ", side: " + side)
+    //alert("Pass");
+    //side = 3 - side;
     return;
   } let oldSide = side;
   if (!setStone(bestMove, side, false)) play(depth-1);
