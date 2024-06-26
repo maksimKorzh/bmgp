@@ -1,31 +1,114 @@
-// BOARD
-var size = 13;
-
-// GUI
+// Init board canvas
 const canvas = document.getElementById('gobang');
 const ctx = canvas.getContext('2d');
-const cell = canvas.width / (size+2);
-function drawBoard(position) {
+
+// Stone encodings
+const EMPTY = 0
+const BLACK = 1
+const WHITE = 2
+const MARKER = 4
+const OFFBOARD = 7
+const LIBERTY = 8
+
+// Go board
+var board = [];
+
+// NxN board; size = N (+2 is offboard)
+var size = 15;
+
+// Side to move
+var side = BLACK;
+
+// Count liberties & blocks
+var liberties = [];
+var block = [];
+var points_side = [];
+var points_count = [];
+
+// Misc
+var ko = EMPTY;
+var bestMove = EMPTY;
+var isCapture = false;
+
+// Rendered cell size
+var cell = canvas.width / size;
+
+// Change board size
+var selectSize = document.getElementById("size");
+selectSize.addEventListener("change", function() {
+  size = parseInt(selectSize.value);
+  cell = canvas.width / size;
+  initBoard();
+  drawBoard();
+  side = BLACK;
+  ko = EMPTY;
+});
+
+// Handle mouse click event
+canvas.addEventListener('click', function (event) {
+  let rect = canvas.getBoundingClientRect();
+  let mouseX = event.clientX - rect.left;
+  let mouseY = event.clientY - rect.top;
+  let col = Math.floor(mouseX / cell);
+  let row = Math.floor(mouseY / cell);
+  let sq = row * size + col;
+  if (board[sq]) return;
+  if (!setStone(sq, side, true)) return;
+  drawBoard();
+  setTimeout(function() { play(2); }, 10);
+});
+
+// Init board
+function initBoard() {
+  for (let sq = 0; sq < size ** 2; sq++) {
+    switch (true) {
+      case (sq < size):
+      case (sq >= (size ** 2 - size)):
+      case (!(sq % size)):
+        board[sq] = OFFBOARD;
+        board[sq-1] = OFFBOARD;
+        break;
+      default: board[sq] = 0;
+    }
+  }
+}
+
+// Print position to console
+function printPosition() {
+  let position = "";
+  for (let sq = 0; sq < size ** 2; sq++) {
+    position += (!(sq % size)) ? "\n" : "";
+    position += board[sq] + " ";
+  };console.log(position);
+  console.log("Side to move: " + (side == 1 ? "black" : "white"));
+}
+
+// Print score
+function updateScore() {
+  let pts = score();
+  let element = document.getElementById("score");
+  element.innerHTML = "Black " + pts[BLACK] + ", White " + pts[WHITE] + ", Empty " + pts[0];
+}
+
+// Print board
+function drawBoard() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.beginPath();
-  for (let i = 1; i < (size+2)-1; i++) {
-    let x = i * cell + cell / 2;
-    let y = i * cell + cell / 2;
+  for (let i = 1; i < size-1; i++) {
+    const x = i * cell + cell / 2;
+    const y = i * cell + cell / 2;
     let offset = cell * 2 - cell / 2;
     ctx.moveTo(offset, y);
     ctx.lineTo(canvas.width - offset, y);
     ctx.moveTo(x, offset);
     ctx.lineTo(x, canvas.height - offset);
   };ctx.stroke();
-  for (let row = 0; row < (size+2); row++) {
-    for (let col = 0; col < (size+2); col++) {
-      let square = moveToSquare(col, row);
-      let board = "";
-      if (position.moves % 2 == 0) board = position.board.split('x').join('O');
-      else board = position.board.split('X').join('O').split('x').join('X');
-      if (position.board[square] == " " || position.board[square] == "\n") continue;
-      let color = board[square] == "X" ? "black" : "white";
-      if (position.board[square] != ".") {
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      let sq = row*size + col;
+      if (board[sq] == 7) continue;
+      let color = board[row * size + col] == 1 ? "black" : "white";
+      if (board[sq]) {
         ctx.beginPath();
         ctx.arc(col * cell + cell / 2, row * cell + cell / 2, cell / 2 - 2, 0, 2 * Math.PI);
         ctx.fillStyle = color;
@@ -33,123 +116,184 @@ function drawBoard(position) {
         ctx.stroke();
       }
     }
-  }
+  } updateScore();
 }
 
-// ENGINE
-const contactRegexes = {};
-const regexSources = {
-  '.': '\\.',
-  'x': 'x',
-  'X': 'X'
-};
-
-for (let color in regexSources) {
-  const regexPattern = regexSources[color];
-  const contactRegexSources = [
-    `#${regexPattern}`,                             // color at right
-    `${regexPattern}#`,                             // color at left
-    `#${'.'.repeat((size+2) - 1)}${regexPattern}`,  // color below
-    `${regexPattern}${'.'.repeat((size+2) - 1)}#`   // color above
-  ]; contactRegexes[color] = new RegExp(contactRegexSources.join('|'), 's');
+// Put stone on board
+function setStone(sq, color, user) {
+  if (board[sq] != EMPTY) {
+    if (user) alert("Illegal move!");
+    return false;
+  } else if (sq == ko) {
+    if (user) alert("Ko!");
+    return false;
+  } let old_ko = ko;
+  ko = EMPTY;
+  board[sq] = color;
+  captures(3 - color);
+  count(sq, color);
+  let suicide = liberties.length ? false : true; 
+  restoreBoard();
+  if (suicide) {
+    board[sq] = EMPTY;
+    ko = old_ko;
+    if (user) alert("Suicide move!");
+    return false;
+  } side = 3 - side;
+  return true;
 }
 
-function getNeighbors(square) { return [square-1, square+1, square-(size+2), square+(size+2)]; }
-function setStone(board, square, stone) { return board.slice(0, square) + stone + board.slice(square + 1); }
-function moveToSquare(x, y) { return y*(size+2)+ x; }
-
-function Position(board, captures, moves, ko, komi) {
-  return {
-  "board": board,
-  "captures": captures,
-  "moves": moves,
-  "ko": ko,
-  "komi": komi
-  }
-}
-
-function initBoard() {
-  let empty = [...Array(size+2)].map((_, i) => i === 0 ?
-      ' '.repeat(size + 1) : i === size + 1 ?
-        ' '.repeat(size + 2) : ' ' +
-        '.'.repeat(size)).join('\n');
-  return Position(empty, [0, 0], 0, null, komi=7.5);
-}
-
-function isEyeish(board, square) {
-  let eyecolor = null;
-  let othercolor;
-  const neighbors = getNeighbors(square);
-  for (let neighbor of neighbors) {
-    if (board[neighbor].trim() === "") continue;
-    if (board[neighbor] === '.') return null;
-    if (eyecolor === null) {
-      eyecolor = board[neighbor];
-      othercolor = eyecolor === eyecolor.toUpperCase() ? eyecolor.toLowerCase() : eyecolor.toUpperCase();
-    } else if (board[neighbor] === othercolor) return null;
-  }
-  return eyecolor;
-}
-
-function floodfill(board, square) {
-  let byteboard = new Uint8Array(board.split('').map(char => char.charCodeAt(0)));
-  let color = byteboard[square];
-  byteboard[square] = '#'.charCodeAt(0);
-  let fringe = [square];
-  while (fringe.length > 0) {
-    square = fringe.pop();
-    for (let neighbor of getNeighbors(square)) {
-      if (byteboard[neighbor] == color) {
-        byteboard[neighbor] = '#'.charCodeAt(0);
-        fringe.push(neighbor);
-      }
+// Handle captures
+function captures(color) {
+  for (let sq = 0; sq < size ** 2; sq++) {
+    let stone = board[sq];
+    if (stone == OFFBOARD) continue;
+    if (stone & color) {
+      count(sq, color);
+      if (liberties.length == 0) clearBlock();
+      restoreBoard()
     }
-  };return String.fromCharCode.apply(null, byteboard);
-}
-
-function contact(board, color) {
-  const match = board.match(contactRegexes[color]);
-  if (!match) return null;
-  return match.index;
-}
-
-function makeMove(position, square) {
-  if (position.board[square] != ".") return null;
-  if (square == position.ko) return null;
-  let inEnemyEye = (isEyeish(position.board, square) == 'x');
-  let board = setStone(position.board, square, 'X');
-  captureX = position.captures[0];
-  singleCaptures = [];
-  for (let neighbor of getNeighbors(square)) {
-    if (board[neighbor] != "x") continue;
-    floodfill_board = floodfill(board, neighbor)  // get a board with the adjecent group replaced by '#'
-    console.log(floodfill_board);
-    if (contact(floodfill_board, '.') != null) continue;
-    capture_count = floodfill_board.split('#').length - 1;
-    if (capture_count == 1) singleCaptures.push(neighbor);
-    captureX += capture_count;
-    board = floodfill_board.split("#").join(".");
   }
-  let ko = (inEnemyEye && singleCaptures.length) ? singleCaptures[0] : null; 
-  if (contact(floodfill(board, square), ".") == null) return null;
-  board = board.split('').map(c => c == c.toUpperCase() ? c.toLowerCase() : c.toUpperCase()).join('');
-  return Position(board, [position.captures[1], captureX], position.moves+1, ko, 7.5);
 }
 
-// MAIN
-canvas.addEventListener('click', userInput);
-function userInput(event) {
-  let rect = canvas.getBoundingClientRect();
-  let mouseX = event.clientX - rect.left;
-  let mouseY = event.clientY - rect.top;
-  let col = Math.floor(mouseX / cell);
-  let row = Math.floor(mouseY / cell);
-  let isLegal = makeMove(position, moveToSquare(col, row))
-  if (isLegal != null) position = isLegal;
-  console.log(position);
-  drawBoard(position);
-  //setTimeout(function() { play(2); }, 10);
+// Count liberties, save stone group coords
+function count(sq, color) {
+  stone = board[sq];
+  if (stone == OFFBOARD) return;
+  if (stone && (stone & color) && (stone & MARKER) == 0) {
+    block.push(sq);
+    board[sq] |= MARKER;
+    count(sq - size, color);
+    count(sq - 1, color);
+    count(sq + size, color);
+    count(sq + 1, color);
+  } else if (stone == EMPTY) {
+    board[sq] |= LIBERTY;
+    liberties.push(sq);
+  }
 }
 
-let position = initBoard();
-drawBoard(position);
+// Restore the board after counting stones
+function restoreBoard() {
+  clearGroups();
+  for (let sq = 0; sq < size ** 2; sq++) {
+    if (board[sq] != OFFBOARD) board[sq] &= 3;
+  }
+}
+
+// Remove captured stones
+function clearBlock() {
+  isCapture = true;
+  if (block.length == 1) ko = block[0];
+  for (let i = 0; i < block.length; i++)
+    board[block[i]] = EMPTY;
+}
+
+// Clear groups
+function clearGroups() {
+  block = [];
+  liberties = [];
+  points_side = [];
+}
+
+// Count territory territory
+function territory(sq) {
+  stone = board[sq];
+  if (stone == OFFBOARD) return OFFBOARD;
+  if (stone == EMPTY) {
+    block.push(sq);
+    points_count.push(sq);
+    board[sq] |= MARKER;
+    territory(sq - size);
+    territory(sq - 1);
+    territory(sq + size);
+    territory(sq + 1);
+  } else if (stone != MARKER) {
+    points_side.push(stone);
+  } if (!points_side.length) return [EMPTY, points_count.length];
+  else if (points_side.every((element) => element === points_side[0])) return [points_side[0], points_count.length];
+  else return [EMPTY, points_count.length];
+}
+
+// Evaluate position
+function score() {
+  let scorePosition = [0, 0, 0];
+  for (let sq = 0; sq < size ** 2; sq++) {
+    if (board[sq]) continue;
+    let result = territory(sq);
+    scorePosition[result[0]] += result[1];
+    points_side = [];
+    points_count = [];
+  } restoreBoard();
+  return scorePosition;
+}
+
+// Evaluate position
+function evaluate() {
+  let points = score();
+  let eval = points[1] - points[2];
+  let blackStones = 0;
+  let whiteStones = 0;
+  let blackLiberties = 0;
+  let whiteLiberties = 0;
+  for (let sq = 0; sq < size ** 2; sq++) {
+    if (!board[sq] || board[sq] == OFFBOARD) continue;
+    if (board[sq] == BLACK) blackStones += 1 + board.length / 2 * 5;
+    if (board[sq] == WHITE) whiteStones += 1 + board.length / 2 * 5;
+    count(sq, board[sq]);
+    if (board[sq]-MARKER == BLACK) blackLiberties += liberties.length;
+    if (board[sq]-MARKER == WHITE) whiteLiberties += liberties.length;
+    restoreBoard();
+  } eval += (blackStones - whiteStones);
+  eval += blackLiberties - whiteLiberties;
+  if (points[1] == points[2]) {
+    let direction = Math.random() * 2;
+    eval += (side == BLACK) ? direction : -direction;
+  } return (side == BLACK) ? eval : -eval;
+}
+
+// Search move
+function search(depth) {
+  if (!depth) return evaluate();
+  let bestScore = -10000;
+  for (let sq = 0; sq < size ** 2; sq++) {
+    if (board[sq]) continue;
+    if (sq == ko) continue;
+    let oldBoard = JSON.stringify(board);
+    let oldSide = side;
+    let oldKo = ko;
+    if (!setStone(sq, side, false)) continue;
+    let eval = -search(depth-1);
+    if (eval > bestScore) {
+      bestScore = eval;
+      bestMove = sq;
+    } board = JSON.parse(oldBoard);
+    side = oldSide;
+    ko = oldKo;
+  } return bestScore;
+}
+
+// Engine plays move
+function play(depth) {
+  isCapture = false;
+  let quickScore = search(1);
+  let canCapture = isCapture;
+  let bestQuick = bestMove;
+  let eval = 0; 
+  if (canCapture) {
+    eval = quickScore;
+    bestMove = bestQuick;
+  } else eval = search(depth);
+  if (eval == -10000) {
+    alert("Pass");
+    side = 3 - side;
+    return;
+  } let oldSide = side;
+  if (!setStone(bestMove, side, false)) play(depth-1);
+  drawBoard();
+  let scorePosition = score();
+}
+
+// Main
+initBoard();
+drawBoard();

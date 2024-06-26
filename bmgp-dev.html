@@ -16,6 +16,11 @@
       flex-direction: column;
     }
   </style>
+  <select id="size" style="margin-left: 30px; z-index: 1">
+    <option value="11">9x9</option>
+    <option value="14" selected>13x13</option>
+    <option value="21">19x19</option>
+  </select>
   <canvas
     id="gobang"
     width="500"
@@ -30,6 +35,7 @@
       left: 0;
       right: 0;">
   </canvas>
+  <div id="score" style="text-align: center; margin-top: 450px;">Black to play</div>
   <script src="bmgp-dev.js"></script>
 </body>
 </html>
