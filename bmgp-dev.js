@@ -33,37 +33,6 @@ var isCapture = false;
 // Rendered cell size
 var cell = canvas.width / size;
 
-function generateHeatmap(boardSize) {
-    const heatmap = new Array(boardSize * boardSize).fill(0);
-
-    // Function to calculate heatmap values
-    const calculateValue = (x, y) => {
-        const center = Math.floor(boardSize / 2);
-        const distanceFromEdge = Math.min(x, y, boardSize - 1 - x, boardSize - 1 - y);
-        const distanceFromCenter = Math.abs(center - x) + Math.abs(center - y);
-        
-        // Invert the values so that corners are higher and center is lower
-        return distanceFromEdge + Math.max(center - distanceFromCenter, 0);
-    };
-
-    for (let i = 0; i < boardSize; i++) {
-        for (let j = 0; j < boardSize; j++) {
-            heatmap[i * boardSize + j] = calculateValue(i, j);
-        }
-    }
-
-    return heatmap;
-}
-
-// Example usage
-const boardSize = 19;
-const heatmap = generateHeatmap(boardSize);
-
-// Output the heatmap in a readable format
-for (let i = 0; i < boardSize; i++) {
-    console.log(heatmap.slice(i * boardSize, (i + 1) * boardSize).join(' '));
-}
-
 // Change board size
 var selectSize = document.getElementById("size");
 selectSize.addEventListener("change", function() {
@@ -136,7 +105,7 @@ function drawBoard() {
   };ctx.stroke();
   for (let row = 0; row < size; row++) {
     for (let col = 0; col < size; col++) {
-      let sq = row*size + col;
+      let sq = row * size + col;
       if (board[sq] == 7) continue;
       let color = board[sq] == 1 ? "black" : "white";
       if (board[sq]) {
@@ -297,8 +266,7 @@ function getUrgentMoves() {
     if (liberties.length < 3) {
       if (board[sq]-MARKER == BLACK) for (let sq of liberties) urgent.push(sq);
       if (board[sq]-MARKER == WHITE) for (let sq of liberties) urgent.push(sq);
-    }
-    restoreBoard();
+    };restoreBoard();
   };return urgent;
 }
 
@@ -307,7 +275,6 @@ function search(depth) {
   if (!depth) return evaluate();
   let bestScore = -10000;
   for (let sq of getUrgentMoves()) {
-    if (board[sq]) continue;
     if (sq == ko) continue;
     let oldBoard = JSON.stringify(board);
     let oldSide = side;
@@ -324,8 +291,61 @@ function search(depth) {
   return bestScore;
 }
 
+function inEye(sq, offset) {
+  let count = 0;
+  for (let dir of [1, -1, size, -size]) {
+    if (board[sq+offset+dir] == side || board[sq+offset+dir] == (3-side))
+      count++;
+  }
+  if (count == 4) return 1;
+  else return 0;
+}
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  };return array;
+}
+ 
+function tenuki() {
+  let corners = [(4*size+4), (4*size+(size-5)), ((size-5)*size+4), ((size-5)*size+(size-5))];
+  let sides = [((size-1)/2*size+4), (4*size+(size-1)/2), ((size-1)/2*size+(size-5)), ((size-5)*size+(size-1)/2)];
+  let invasions = [(3*size+3), (3*size+(size-4)), ((size-4)*size+3), ((size-4)*size+(size-4))];
+  for (let sq of corners) {
+    if (board[sq] == EMPTY) {
+      console.log("trying corner " + inEye(sq, 0));
+      if (inEye(sq, 0)) break;
+      else return sq;
+    }
+  }
+  if (size > 11) for (let sq of sides) if (board[sq] == EMPTY) {
+    if (inEye(sq, 0)) break;
+    else return sq;
+  }
+  for (let sq of invasions) if (board[sq] == EMPTY) {
+    if (inEye(sq, 0)) break;
+    else return sq;
+  }
+
+  let indexes = Array.from({length: size ** 2}, (_, i) => i);
+  let shuffledIndexes = shuffle(indexes);
+  for (let sq = 0; sq < shuffledIndexes.length; sq++) {
+    console.log(sq);
+    if (board[sq] == side) {
+      for (let offset of [size*2+1, size*3+2].sort(() => Math.random() - 0.5))
+      if (board[sq+offset] == EMPTY) {
+        if (inEye(sq, offset)) break;
+        else return sq+offset;
+      }
+    }
+  }
+}
+
 // Engine plays move
+var attempts = 0;
 function play(depth) {
+  console.log("thinking...");
   isCapture = false;
   let quickScore = search(1);
   let canCapture = isCapture;
@@ -336,13 +356,20 @@ function play(depth) {
     bestMove = bestQuick;
   } else eval = search(depth);
   if (eval == -10000) {
-   // console.log("moves to search:" + getUrgentMoves()[side].length + ", side: " + side)
-    //alert("Pass");
-    //side = 3 - side;
-    return;
+    bestMove = tenuki();
   } let oldSide = side;
-  if (!setStone(bestMove, side, false)) play(depth-1);
+  console.log("done search");
+  if (!setStone(bestMove, side, false)) {
+    console.log("retrying...")
+    if (attempts > 10) {
+      alert("pass " + eval + "  " + bestMove);
+      side = 3 - side;
+      return;
+    };attempts++;
+    play(depth-1);
+  }
   drawBoard();
+  console.log("best move: " + bestMove);
   let scorePosition = score();
 }
 
