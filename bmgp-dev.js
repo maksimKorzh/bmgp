@@ -55,7 +55,7 @@ canvas.addEventListener('click', function (event) {
   if (board[sq]) return;
   if (!setStone(sq, side, true)) return;
   drawBoard();
-  setTimeout(function() { play(2); }, 10);
+  //setTimeout(function() { play(2); }, 10);
 });
 
 // Init board
@@ -107,7 +107,7 @@ function drawBoard() {
     for (let col = 0; col < size; col++) {
       let sq = row*size + col;
       if (board[sq] == 7) continue;
-      let color = board[row * size + col] == 1 ? "black" : "white";
+      let color = board[sq] == 1 ? "black" : "white";
       if (board[sq]) {
         ctx.beginPath();
         ctx.arc(col * cell + cell / 2, row * cell + cell / 2, cell / 2 - 2, 0, 2 * Math.PI);
@@ -184,7 +184,13 @@ function restoreBoard() {
 // Remove captured stones
 function clearBlock() {
   isCapture = true;
-  if (block.length == 1) ko = block[0];
+  if (block.length == 1) {
+    let count = 0;
+    for (let sq of [size+1, size-1, -size+1, -size-1]) {
+      if (board[block[0] + sq] == EMPTY) count += 1;
+    }
+    if (count) ko = block[0];
+  }
   for (let i = 0; i < block.length; i++)
     board[block[i]] = EMPTY;
 }
