@@ -28,7 +28,6 @@ var points_count = [];
 // Misc
 var ko = EMPTY;
 var bestMove = EMPTY;
-var isCapture = false;
 
 // Rendered cell size
 var cell = canvas.width / size;
@@ -192,7 +191,6 @@ function restoreBoard() {
 
 // Remove captured stones
 function clearBlock() {
-  isCapture = true;
   if (block.length == 1) {
     let count = 0;
     for (let sq of [size+1, size-1, -size+1, -size-1]) {
@@ -245,8 +243,6 @@ function score() {
 
 // Evaluate position
 function evaluate() {
-  //let points = score();
-  //let eval = points[1] - points[2];
   let eval = 0;
   let blackStones = 0;
   let whiteStones = 0;
@@ -256,18 +252,19 @@ function evaluate() {
     if (!board[sq] || board[sq] == OFFBOARD) continue;
     if (board[sq] == BLACK) blackStones += 1;//+ board.length / 2 * 5;
     if (board[sq] == WHITE) whiteStones += 1;//+ board.length / 2 * 5;
-    //count(sq, board[sq]);
-    //if (board[sq]-MARKER == BLACK) blackLiberties += liberties.length;
-    //if (board[sq]-MARKER == WHITE) whiteLiberties += liberties.length;
-    //restoreBoard();
   } eval += (blackStones - whiteStones);
-  //eval += (blackLiberties - whiteLiberties);
-  /*if (points[1] == points[2]) {
-    let direction = Math.random() * 2;
-    eval += (side == BLACK) ? direction : -direction;
-  }*/
-
   return (side == BLACK) ? eval : -eval;
+}
+
+function isAtari() {
+  let bestAtari = [-1, -1];
+  for (let sq = 0; sq < size ** 2; sq++) {
+    count(sq, board[sq]);
+    if (liberties.length == 1) {
+      if (board[sq]-MARKER == 3-side && block.length > bestAtari[1])
+        bestAtari = [liberties[0], block.length];
+    };restoreBoard();
+  };return bestAtari[0];
 }
 
 // Find moves to kill/save groups
@@ -328,7 +325,6 @@ function tenuki() {
 
   for (let sq of corners) {
     if (board[sq] == EMPTY) {
-      console.log("trying corner " + inEye(sq, 0));
       if (inEye(sq, 0)) break;
       else return sq;
     }
@@ -343,13 +339,10 @@ function tenuki() {
   for (let sq = 0; sq < shuffledIndexes.length; sq++) {
     if (board[sq] == (3-side)) {
       for (let offset of [1, -1, size, -size].sort(() => Math.random() - 0.5)) {
-        if (board[sq+offset] == OFFBOARD) continue;
+        if (board[sq+offset*2] == OFFBOARD) continue;
         if (board[sq+offset] == EMPTY) {
           if (inEye(sq, offset)) continue;
-          else {
-            printPosition();
-            return sq+offset;
-          }
+          else return sq+offset;
         }
       }
     }
@@ -359,22 +352,21 @@ function tenuki() {
 // Engine plays move
 var attempts = 0;
 function play(depth) {
-  isCapture = false;
-  let quickScore = search(1);
-  let canCapture = isCapture;
-  let bestQuick = bestMove;
+  console.log("thinking..")
   let eval = 0;
-  if (canCapture) {
-    eval = quickScore;
+  let bestQuick = isAtari();
+  console.log("best quick: " + bestQuick)
+  if (bestQuick >= 0 && bestQuick != ko) {
     bestMove = bestQuick;
-    console.log("can capture " + bestMove + "  " + bestQuick);
+    console.log("just capture")
   }
-  else eval = search(depth);
-  
-  if (eval == -10000) {
-    bestMove = tenuki();
-    console.log("tenuki: " + bestMove);
-  } else console.log("recursive: " + bestMove);
+  else {
+    eval = search(depth);
+    if (eval == -10000) {
+      bestMove = tenuki();
+      console.log("tenuki: " + bestMove);
+    } else console.log("recursive: " + bestMove);
+  }
 
   let oldSide = side;
   if (!setStone(bestMove, side, false)) {
@@ -386,6 +378,7 @@ function play(depth) {
     play(depth-1);
   }
   drawBoard();
+  console.log("done")
   let scorePosition = score();
 }
 
