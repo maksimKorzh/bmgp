@@ -44,7 +44,9 @@ selectSize.addEventListener("change", function() {
 });
 
 // Handle mouse click event
-canvas.addEventListener('click', function userInput(event) {
+canvas.addEventListener('click', userInput);
+
+function userInput(event) {
   let rect = canvas.getBoundingClientRect();
   let mouseX = event.clientX - rect.left;
   let mouseY = event.clientY - rect.top;
@@ -55,7 +57,7 @@ canvas.addEventListener('click', function userInput(event) {
   if (!setStone(sq, side, true)) return;
   drawBoard();
   setTimeout(function() { play(4); }, 10);
-});
+}
 
 // Init board
 function initBoard() {
@@ -123,7 +125,7 @@ function drawBoard() {
         ctx.stroke();
       }
     }
-  } updateScore();
+  }
 }
 
 // Put stone on board
@@ -241,6 +243,7 @@ function score() {
   let prisoners = evaluate();
   if (prisoners > 0) scorePosition[BLACK] += prisoners;
   else if (prisoners < 0) scorePosition[WHITE] += Math.abs(prisoners);
+  scorePosition[WHITE] += 7.5;
   return scorePosition;
 }
 
@@ -323,8 +326,7 @@ function shuffle(array) {
 }
  
 function tenuki() {
-  console.log("enter tenuki")
-  const corners = [(3*size+3), (3*size+(size-4)), ((size-4)*size+3), ((size-4)*size+(size-4))];
+  const corners = [(4*size+4), (4*size+(size-5)), ((size-5)*size+4), ((size-5)*size+(size-5))];
   const sides = [((size-1)/2*size+3), (3*size+(size-1)/2), ((size-1)/2*size+(size-4)), ((size-4)*size+(size-1)/2)];
 
   for (let sq of corners) {
@@ -333,24 +335,24 @@ function tenuki() {
       else return sq;
     }
   }
-  if (size > 11) for (let sq of sides) if (board[sq] == EMPTY) {
-    if (inEye(sq, 0)) break;
-    else return sq;
+  if (size > 11) {
+    for (let sq of sides) if (board[sq] == EMPTY) {
+      if (inEye(sq, 0)) break;
+      else return sq;
+    }
   }
-
-  let indexes = Array.from({length: size ** 2}, (_, i) => i);
-  let shuffledIndexes = shuffle(indexes);
-  for (let sq = 0; sq < shuffledIndexes.length; sq++) {
-    if (board[sq] == (3-side)) {
-      for (let offset of [1, -1, size, -size].sort(() => Math.random() - 0.5)) {
-        if (board[sq+offset] == OFFBOARD ||
+  if (score()[EMPTY]) {
+    let indexes = Array.from({length: size ** 2}, (_, i) => i);
+    let shuffledIndexes = shuffle(indexes);
+    for (let sq = 0; sq < shuffledIndexes.length; sq++) {
+      if (board[sq] == (3-side)) {
+        for (let offset of [1, -1, size, -size].sort(() => Math.random() - 0.5)) {
+          if (board[sq+offset] == OFFBOARD ||
             board[sq+offset*2] == OFFBOARD ||
-            board[sq+offset*3] == OFFBOARD) {console.log("skip attach"); break}
-        else if (board[sq+offset] == EMPTY) {
-          if (inEye(sq, offset)) break;
-          else {
-            console.log("found attach")
-            return sq+offset;
+            board[sq+offset*3] == OFFBOARD) break;
+          else if (board[sq+offset] == EMPTY) {
+            if (inEye(sq, offset)) break;
+            else return sq+offset;
           }
         }
       }
@@ -369,14 +371,21 @@ function play(depth) {
     if (eval == -10000) bestMove = tenuki();
   };let oldSide = side;
   if (!setStone(bestMove, side, false)) {
-    if (attempts > 20) {
-      alert("Pass");
-      drawBoard();
+    if (attempts > 1) {
       side = 3 - side;
+      updateScore();
+      let empty = score()[EMPTY];
+      if (empty == 0) {
+        let finalScore = score();
+        finalScore = finalScore[BLACK] - finalScore[WHITE];
+        alert(((finalScore > 0) ? "Black": "White") + " wins by " + Math.abs(finalScore) + " points");
+        canvas.removeEventListener("click", userInput);
+      } else alert("Pass");
       return;
     };attempts++;
     play(depth-1);
   };drawBoard();
+  updateScore();
   let scorePosition = score();
 }
 
