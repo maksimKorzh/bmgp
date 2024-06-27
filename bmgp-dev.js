@@ -55,7 +55,7 @@ canvas.addEventListener('click', function (event) {
   if (board[sq]) return;
   if (!setStone(sq, side, true)) return;
   drawBoard();
-  setTimeout(function() { play(1); }, 10);
+  setTimeout(function() { play(4); }, 10);
 });
 
 // Init board
@@ -287,6 +287,8 @@ function search(depth) {
   if (!depth) return evaluate();
   let bestScore = -10000;
   for (let sq of getUrgentMoves()) {
+    for (let offset of [1, -1, size, -size])
+      if (board[sq+offset] == OFFBOARD && depth == 1) continue;
     if (sq == ko) continue;
     let oldBoard = JSON.stringify(board);
     let oldSide = side;
@@ -356,12 +358,14 @@ function play(depth) {
   let quickScore = search(1);
   let canCapture = isCapture;
   let bestQuick = bestMove;
-  let eval = 0; 
+  let eval = 0;
   if (canCapture) {
     eval = quickScore;
     bestMove = bestQuick;
-  } else eval = search(depth);
-  console.log("eval: " + eval);
+    console.log("can capture " + bestMove + "  " + bestQuick);
+  }
+  else eval = search(depth);
+  
   if (eval == -10000) {
     bestMove = tenuki();
     console.log("tenuki: " + bestMove);
