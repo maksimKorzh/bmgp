@@ -320,6 +320,7 @@ function shuffle(array) {
 }
  
 function tenuki() {
+  console.log("enter tenuki")
   const corners = [(3*size+3), (3*size+(size-4)), ((size-4)*size+3), ((size-4)*size+(size-4))];
   const sides = [((size-1)/2*size+3), (3*size+(size-1)/2), ((size-1)/2*size+(size-4)), ((size-4)*size+(size-1)/2)];
 
@@ -339,10 +340,15 @@ function tenuki() {
   for (let sq = 0; sq < shuffledIndexes.length; sq++) {
     if (board[sq] == (3-side)) {
       for (let offset of [1, -1, size, -size].sort(() => Math.random() - 0.5)) {
-        if (board[sq+offset*2] == OFFBOARD) continue;
-        if (board[sq+offset] == EMPTY) {
-          if (inEye(sq, offset)) continue;
-          else return sq+offset;
+        if (board[sq+offset] == OFFBOARD ||
+            board[sq+offset*2] == OFFBOARD ||
+            board[sq+offset*3] == OFFBOARD) {console.log("skip attach"); break}
+        else if (board[sq+offset] == EMPTY) {
+          if (inEye(sq, offset)) break;
+          else {
+            console.log("found attach")
+            return sq+offset;
+          }
         }
       }
     }
