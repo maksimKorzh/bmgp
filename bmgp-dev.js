@@ -308,7 +308,7 @@ function search(depth) {
 function inEye(sq, offset) {
   let count = 0;
   for (let dir of [1, -1, size, -size]) {
-    if (board[sq+offset+dir] == side || board[sq+offset+dir] == (3-side))
+    if (board[sq+offset+dir] == side || board[sq+offset+dir] == (3-side) || board[sq+offset+dir] == OFFBOARD)
       count++;
   }
   if (count == 4) return 1;
@@ -342,10 +342,15 @@ function tenuki() {
   let shuffledIndexes = shuffle(indexes);
   for (let sq = 0; sq < shuffledIndexes.length; sq++) {
     if (board[sq] == (3-side)) {
-      for (let offset of [1, -1].sort(() => Math.random() - 0.5))
-      if (board[sq+offset] == EMPTY) {
-        if (inEye(sq, offset)) break;
-        else return sq+offset;
+      for (let offset of [1, -1, size, -size].sort(() => Math.random() - 0.5)) {
+        if (board[sq+offset] == OFFBOARD) continue;
+        if (board[sq+offset] == EMPTY) {
+          if (inEye(sq, offset)) continue;
+          else {
+            printPosition();
+            return sq+offset;
+          }
+        }
       }
     }
   }
