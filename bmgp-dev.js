@@ -1,8 +1,9 @@
 // Init board canvas
 const canvas = document.getElementById('gobang');
 const ctx = canvas.getContext('2d');
+canvas.addEventListener('click', userInput);
 
-// Stone encodings
+// Game state
 const EMPTY = 0
 const BLACK = 1
 const WHITE = 2
@@ -10,26 +11,15 @@ const MARKER = 4
 const OFFBOARD = 7
 const LIBERTY = 8
 
-// Go board
 var board = [];
-
-// NxN board; size = N (+2 is offboard)
 var size = 15;
-
-// Side to move
 var side = BLACK;
-
-// Count liberties & blocks
 var liberties = [];
 var block = [];
 var points_side = [];
 var points_count = [];
-
-// Misc
 var ko = EMPTY;
 var bestMove = EMPTY;
-
-// Rendered cell size
 var cell = canvas.width / size;
 
 // Change board size
@@ -42,9 +32,6 @@ selectSize.addEventListener("change", function() {
   side = BLACK;
   ko = EMPTY;
 });
-
-// Handle mouse click event
-canvas.addEventListener('click', userInput);
 
 function userInput(event) {
   let rect = canvas.getBoundingClientRect();
@@ -197,10 +184,8 @@ function clearBlock() {
     let count = 0;
     for (let sq of [size+1, size-1, -size+1, -size-1]) {
       if (board[block[0] + sq] == EMPTY) count += 1;
-    }
-    if (count) ko = block[0];
-  }
-  for (let i = 0; i < block.length; i++)
+    };if (count) ko = block[0];
+  };for (let i = 0; i < block.length; i++)
     board[block[i]] = EMPTY;
 }
 
@@ -211,7 +196,7 @@ function clearGroups() {
   points_side = [];
 }
 
-// Count territory territory
+// Count territory
 function territory(sq) {
   stone = board[sq];
   if (stone == OFFBOARD) return OFFBOARD;
@@ -226,11 +211,12 @@ function territory(sq) {
   } else if (stone != MARKER) {
     points_side.push(stone);
   } if (!points_side.length) return [EMPTY, points_count.length];
-  else if (points_side.every((element) => element == points_side[0])) return [points_side[0], points_count.length];
+  else if (points_side.every((element) => element == points_side[0]))
+    return [points_side[0], points_count.length];
   else return [EMPTY, points_count.length];
 }
 
-// Evaluate position
+// Calculate score for sides
 function score() {
   let scorePosition = [0, 0, 0];
   for (let sq = 0; sq < size ** 2; sq++) {
@@ -262,6 +248,7 @@ function evaluate() {
   return (side == BLACK) ? eval : -eval;
 }
 
+// Find biggest group to capture
 function isAtari() {
   let bestAtari = [-1, -1];
   for (let sq = 0; sq < size ** 2; sq++) {
@@ -273,7 +260,7 @@ function isAtari() {
   };return bestAtari[0];
 }
 
-// Find moves to kill/save groups
+// Find fighting moves
 function getUrgentMoves() {
   let urgent = [];
   for (let sq = 0; sq < size ** 2; sq++) {
@@ -285,7 +272,7 @@ function getUrgentMoves() {
   };return urgent;
 }
 
-// Search move
+// Find best move
 function search(depth) {
   if (!depth) return evaluate();
   let bestScore = -10000;
@@ -304,55 +291,55 @@ function search(depth) {
     } board = JSON.parse(oldBoard);
     side = oldSide;
     ko = oldKo;
-  }
-  return bestScore;
+  };return bestScore;
 }
 
+// Used to allow snapbacks
 function inEye(sq, offset) {
   let count = 0;
   for (let dir of [1, -1, size, -size]) {
-    if (board[sq+offset+dir] == side || board[sq+offset+dir] == (3-side) || board[sq+offset+dir] == OFFBOARD)
+    if (board[sq+offset+dir] == side ||
+      board[sq+offset+dir] == (3-side) ||
+      board[sq+offset+dir] == OFFBOARD)
       count++;
-  }
-  if (count == 4) return 1;
+  };if (count == 4) return 1;
   else return 0;
 }
 
+// Used to attach randomly
 function shuffle(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   };return array;
 }
- 
+
+// Play away
 function tenuki() {
   const corners = [(4*size+4), (4*size+(size-5)), ((size-5)*size+4), ((size-5)*size+(size-5))];
   const sides = [((size-1)/2*size+3), (3*size+(size-1)/2), ((size-1)/2*size+(size-4)), ((size-4)*size+(size-1)/2)];
-
   for (let sq of corners) {
     if (board[sq] == EMPTY) {
       if (inEye(sq, 0)) break;
       else return sq;
     }
-  }
-  if (size > 11) {
+  };if (size > 11) {
     for (let sq of sides) if (board[sq] == EMPTY) {
       if (inEye(sq, 0)) break;
       else return sq;
     }
-  }
-  if (score()[EMPTY]) {
+  };if (score()[EMPTY]) {
     let indexes = Array.from({length: size ** 2}, (_, i) => i);
     let shuffledIndexes = shuffle(indexes);
-    for (let sq = 0; sq < shuffledIndexes.length; sq++) {
+    for (let sq of shuffledIndexes) {
       if (board[sq] == (3-side)) {
-        for (let offset of [1, -1, size, -size].sort(() => Math.random() - 0.5)) {
+        for (let offset of [1, -1, size, -size]) {
           if (board[sq+offset] == OFFBOARD ||
             board[sq+offset*2] == OFFBOARD ||
-            board[sq+offset*3] == OFFBOARD) break;
+            board[sq+offset*3] == OFFBOARD) continue;
           else if (board[sq+offset] == EMPTY) {
-            if (inEye(sq, offset)) break;
-            else return sq+offset;
+            if (inEye(sq, offset)) continue;
+            else { console.log("attach"); return sq+offset; }
           }
         }
       }
@@ -368,10 +355,10 @@ function play(depth) {
   if (bestQuick >= 0 && bestQuick != ko) bestMove = bestQuick;
   else {
     eval = search(depth);
-    if (eval == -10000) bestMove = tenuki();
+    if (eval < 0) bestMove = tenuki();
   };let oldSide = side;
   if (!setStone(bestMove, side, false)) {
-    if (attempts > 1) {
+    if (attempts > 10) {
       side = 3 - side;
       updateScore();
       let empty = score()[EMPTY];
@@ -386,6 +373,7 @@ function play(depth) {
     play(depth-1);
   };drawBoard();
   updateScore();
+  attempts = 0;
   let scorePosition = score();
 }
 
