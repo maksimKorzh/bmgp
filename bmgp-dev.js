@@ -55,7 +55,7 @@ canvas.addEventListener('click', function (event) {
   if (board[sq]) return;
   if (!setStone(sq, side, true)) return;
   drawBoard();
-  setTimeout(function() { play(4); }, 10);
+  setTimeout(function() { play(1); }, 10);
 });
 
 // Init board
@@ -245,26 +245,29 @@ function score() {
 
 // Evaluate position
 function evaluate() {
-  let points = score();
-  let eval = points[1] - points[2];
+  //let points = score();
+  //let eval = points[1] - points[2];
+  let eval = 0;
   let blackStones = 0;
   let whiteStones = 0;
   let blackLiberties = 0;
   let whiteLiberties = 0;
   for (let sq = 0; sq < size ** 2; sq++) {
     if (!board[sq] || board[sq] == OFFBOARD) continue;
-    if (board[sq] == BLACK) blackStones += 1 + board.length / 2 * 5;
-    if (board[sq] == WHITE) whiteStones += 1 + board.length / 2 * 5;
-    count(sq, board[sq]);
-    if (board[sq]-MARKER == BLACK) blackLiberties += liberties.length;
-    if (board[sq]-MARKER == WHITE) whiteLiberties += liberties.length;
-    restoreBoard();
+    if (board[sq] == BLACK) blackStones += 1;//+ board.length / 2 * 5;
+    if (board[sq] == WHITE) whiteStones += 1;//+ board.length / 2 * 5;
+    //count(sq, board[sq]);
+    //if (board[sq]-MARKER == BLACK) blackLiberties += liberties.length;
+    //if (board[sq]-MARKER == WHITE) whiteLiberties += liberties.length;
+    //restoreBoard();
   } eval += (blackStones - whiteStones);
-  eval += blackLiberties - whiteLiberties;
-  if (points[1] == points[2]) {
+  //eval += (blackLiberties - whiteLiberties);
+  /*if (points[1] == points[2]) {
     let direction = Math.random() * 2;
     eval += (side == BLACK) ? direction : -direction;
-  } return (side == BLACK) ? eval : -eval;
+  }*/
+
+  return (side == BLACK) ? eval : -eval;
 }
 
 // Find moves to kill/save groups
@@ -336,7 +339,7 @@ function tenuki() {
   let indexes = Array.from({length: size ** 2}, (_, i) => i);
   let shuffledIndexes = shuffle(indexes);
   for (let sq = 0; sq < shuffledIndexes.length; sq++) {
-    if (board[sq] == BLACK) {
+    if (board[sq] == (3-side)) {
       for (let offset of [1, -1].sort(() => Math.random() - 0.5))
       if (board[sq+offset] == EMPTY) {
         if (inEye(sq, offset)) break;
@@ -349,7 +352,6 @@ function tenuki() {
 // Engine plays move
 var attempts = 0;
 function play(depth) {
-  console.log("thinking...");
   isCapture = false;
   let quickScore = search(1);
   let canCapture = isCapture;
@@ -359,12 +361,14 @@ function play(depth) {
     eval = quickScore;
     bestMove = bestQuick;
   } else eval = search(depth);
+  console.log("eval: " + eval);
   if (eval == -10000) {
     bestMove = tenuki();
-  } let oldSide = side;
-  console.log("done search");
+    console.log("tenuki: " + bestMove);
+  } else console.log("recursive: " + bestMove);
+
+  let oldSide = side;
   if (!setStone(bestMove, side, false)) {
-    console.log("retrying...")
     if (attempts > 10) {
       alert("pass " + eval + "  " + bestMove);
       side = 3 - side;
@@ -373,7 +377,6 @@ function play(depth) {
     play(depth-1);
   }
   drawBoard();
-  console.log("best move: " + bestMove);
   let scorePosition = score();
 }
 
