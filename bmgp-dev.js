@@ -44,7 +44,7 @@ selectSize.addEventListener("change", function() {
 });
 
 // Handle mouse click event
-canvas.addEventListener('click', function (event) {
+canvas.addEventListener('click', function userInput(event) {
   let rect = canvas.getBoundingClientRect();
   let mouseX = event.clientX - rect.left;
   let mouseY = event.clientY - rect.top;
@@ -86,7 +86,7 @@ function printPosition() {
 function updateScore() {
   let pts = score();
   let element = document.getElementById("score");
-  element.innerHTML = "Black " + pts[BLACK] + ", White " + pts[WHITE] + ", Empty " + pts[0];
+  element.innerHTML = "Black " + pts[BLACK] + ", White " + pts[WHITE] + ", Empty " + pts[EMPTY];
 }
 
 // Print board
@@ -224,7 +224,7 @@ function territory(sq) {
   } else if (stone != MARKER) {
     points_side.push(stone);
   } if (!points_side.length) return [EMPTY, points_count.length];
-  else if (points_side.every((element) => element === points_side[0])) return [points_side[0], points_count.length];
+  else if (points_side.every((element) => element == points_side[0])) return [points_side[0], points_count.length];
   else return [EMPTY, points_count.length];
 }
 
@@ -238,6 +238,9 @@ function score() {
     points_side = [];
     points_count = [];
   } restoreBoard();
+  let prisoners = evaluate();
+  if (prisoners > 0) scorePosition[BLACK] += prisoners;
+  else if (prisoners < 0) scorePosition[WHITE] += Math.abs(prisoners);
   return scorePosition;
 }
 
@@ -358,33 +361,22 @@ function tenuki() {
 // Engine plays move
 var attempts = 0;
 function play(depth) {
-  console.log("thinking..")
   let eval = 0;
   let bestQuick = isAtari();
-  console.log("best quick: " + bestQuick)
-  if (bestQuick >= 0 && bestQuick != ko) {
-    bestMove = bestQuick;
-    console.log("just capture")
-  }
+  if (bestQuick >= 0 && bestQuick != ko) bestMove = bestQuick;
   else {
     eval = search(depth);
-    if (eval == -10000) {
-      bestMove = tenuki();
-      console.log("tenuki: " + bestMove);
-    } else console.log("recursive: " + bestMove);
-  }
-
-  let oldSide = side;
+    if (eval == -10000) bestMove = tenuki();
+  };let oldSide = side;
   if (!setStone(bestMove, side, false)) {
-    if (attempts > 10) {
-      alert("pass " + eval + "  " + bestMove);
+    if (attempts > 20) {
+      alert("Pass");
+      drawBoard();
       side = 3 - side;
       return;
     };attempts++;
     play(depth-1);
-  }
-  drawBoard();
-  console.log("done")
+  };drawBoard();
   let scorePosition = score();
 }
 
