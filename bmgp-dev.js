@@ -115,6 +115,14 @@ function drawBoard() {
         ctx.fill();
         ctx.stroke();
       }
+      if (sq == bestMove) {
+        let color = board[sq] == 1 ? "white" : "black";
+        ctx.beginPath();
+        ctx.arc(col * cell+(cell/4)*2, row * cell +(cell/4)*2, cell / 4 - 2, 0, 2 * Math.PI);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.stroke();
+      }
     }
   } updateScore();
 }
@@ -140,6 +148,7 @@ function setStone(sq, color, user) {
     if (user) alert("Suicide move!");
     return false;
   } side = 3 - side;
+  bestMove = sq;
   return true;
 }
 
@@ -309,9 +318,9 @@ function shuffle(array) {
 }
  
 function tenuki() {
-  let corners = [(4*size+4), (4*size+(size-5)), ((size-5)*size+4), ((size-5)*size+(size-5))];
-  let sides = [((size-1)/2*size+4), (4*size+(size-1)/2), ((size-1)/2*size+(size-5)), ((size-5)*size+(size-1)/2)];
-  let invasions = [(3*size+3), (3*size+(size-4)), ((size-4)*size+3), ((size-4)*size+(size-4))];
+  const corners = [(3*size+3), (3*size+(size-4)), ((size-4)*size+3), ((size-4)*size+(size-4))];
+  const sides = [((size-1)/2*size+3), (3*size+(size-1)/2), ((size-1)/2*size+(size-4)), ((size-4)*size+(size-1)/2)];
+
   for (let sq of corners) {
     if (board[sq] == EMPTY) {
       console.log("trying corner " + inEye(sq, 0));
@@ -323,17 +332,12 @@ function tenuki() {
     if (inEye(sq, 0)) break;
     else return sq;
   }
-  for (let sq of invasions) if (board[sq] == EMPTY) {
-    if (inEye(sq, 0)) break;
-    else return sq;
-  }
 
   let indexes = Array.from({length: size ** 2}, (_, i) => i);
   let shuffledIndexes = shuffle(indexes);
   for (let sq = 0; sq < shuffledIndexes.length; sq++) {
-    console.log(sq);
-    if (board[sq] == side) {
-      for (let offset of [size*2+1, size*3+2].sort(() => Math.random() - 0.5))
+    if (board[sq] == BLACK) {
+      for (let offset of [1, -1].sort(() => Math.random() - 0.5))
       if (board[sq+offset] == EMPTY) {
         if (inEye(sq, offset)) break;
         else return sq+offset;
