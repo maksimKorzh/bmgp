@@ -115,7 +115,7 @@ function score() { /* Scores game, returns points [empty, black, white]*/
   return scorePosition;
 }
 
-function updateScore() { /* Render score on screen */
+function updateScore() { /* Render score to screen */
   let pts = score();
   let element = document.getElementById("score");
   element.innerHTML = "Black " + pts[BLACK] + ", White " + pts[WHITE] + ", Empty " + pts[EMPTY];
@@ -228,12 +228,10 @@ function evaluate() { /* Count captures stones difference */
   let eval = 0;
   let blackStones = 0;
   let whiteStones = 0;
-  let blackLiberties = 0;
-  let whiteLiberties = 0;
   for (let sq = 0; sq < size ** 2; sq++) {
     if (!board[sq] || board[sq] == OFFBOARD) continue;
-    if (board[sq] == BLACK) blackStones += 1;//+ board.length / 2 * 5;
-    if (board[sq] == WHITE) whiteStones += 1;//+ board.length / 2 * 5;
+    if (board[sq] == BLACK) blackStones += 1;
+    if (board[sq] == WHITE) whiteStones += 1;
   } eval += (blackStones - whiteStones);
   return (side == BLACK) ? eval : -eval;
 }
@@ -283,7 +281,7 @@ function tenuki() { /* Play away when no urgent moves */
             board[sq+offset*3] == OFFBOARD) continue;
           else if (board[sq+offset] == EMPTY) {
             if (inEye(sq, offset)) continue;
-            else { console.log("attach"); return sq+offset; }
+            else return sq+offset;
           }
         }
       }
@@ -312,7 +310,6 @@ function play(depth) { /* Engine plays a move */
   };let oldSide = side;
   if (!setStone(bestMove, side, false)) {
     if (attempts > 10) {
-      console.log("attempts: " + attempts);
       side = 3 - side;
       updateScore();
       let empty = score()[EMPTY];
@@ -324,7 +321,7 @@ function play(depth) { /* Engine plays a move */
       } else alert("Pass");
       return;
     };attempts++;
-    play(depth-1);
+    play(1);
   };drawBoard();
   updateScore();
   attempts = 0;
