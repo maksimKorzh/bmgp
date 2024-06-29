@@ -41,9 +41,7 @@ sides - it just happens engine takes the entire center without
 even realizing it.
 
 # Known issues
-In some very rare cases ko might be ignored.
-Honestly, for now I have no idea how to fix it.
-Also sometimes engine's pass may occur when not expected.
+Sometimes engine's pass may occur when not expected.
 It's also possible for engine to stuck, it goes into a
 recursion overflow if can't make the best move on board.
 However, despite the above it's playable!

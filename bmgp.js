@@ -136,24 +136,25 @@ function initBoard() { /* Empty board, set offboard squares */
   }
 }
 
-function inEye(sq, offset) { /* Check if sqaure is in diamond shape */
-  let count = 0;
-  for (let dir of [1, -1, size, -size]) {
-    if (board[sq+offset+dir] == side ||
-      board[sq+offset+dir] == (3-side) ||
-      board[sq+offset+dir] == OFFBOARD)
-      count++;
-  };if (count == 4) return 1;
-  else return 0;
+function inEye(sq) { /* Check if sqaure is in diamond shape */
+  let eyeColor = -1;
+  let otherColor = -1;
+  for (let offset of [1, -1, size, -size]) {
+    if (board[sq+offset] == OFFBOARD) continue;
+    if (board[sq+offset] == EMPTY) return 0;
+    if (eyeColor == -1) {
+      eyeColor = board[sq+offset];
+      otherColor = 3-eyeColor;
+    } else if (board[sq+offset] == otherColor)
+      return 0;
+  }
+  if (eyeColor > 2) eyeColor -= MARKER;
+  return eyeColor;
 }
 
 function clearBlock() { /* Erase stones when captured */
-  if (block.length == 1) {
-    let count = 0;
-    for (let sq of [size+1, size-1, -size+1, -size-1]) {
-      if (board[block[0] + sq] == EMPTY) count += 1;
-    };if (count) ko = block[0];
-  };for (let i = 0; i < block.length; i++)
+  if (block.length == 1 && inEye(bestMove, 0) == 3-side) ko = block[0];
+  for (let i = 0; i < block.length; i++)
     board[block[i]] = EMPTY;
 }
 
@@ -190,6 +191,7 @@ function restoreBoard() { /* Remove group markers */
 }
 
 function setStone(sq, color, user) { /* Place stone on board */
+  bestMove = sq;
   if (board[sq] != EMPTY) {
     if (user) alert("Illegal move!");
     return false;
@@ -209,7 +211,6 @@ function setStone(sq, color, user) { /* Place stone on board */
     if (user) alert("Suicide move!");
     return false;
   } side = 3 - side;
-  bestMove = sq;
   return true;
 }
 
@@ -262,12 +263,12 @@ function tenuki() { /* Play away when no urgent moves */
   const sides = [((size-1)/2*size+3), (3*size+(size-1)/2), ((size-1)/2*size+(size-4)), ((size-4)*size+(size-1)/2)];
   for (let sq of corners) {
     if (board[sq] == EMPTY) {
-      if (inEye(sq, 0)) break;
+      if (inEye(sq)) break;
       else return sq;
     }
   }
   for (let sq of sides) if (board[sq] == EMPTY) {
-    if (inEye(sq, 0)) break;
+    if (inEye(sq)) break;
     else return sq;
   }
   if (score()[EMPTY]) {
@@ -280,7 +281,7 @@ function tenuki() { /* Play away when no urgent moves */
             board[sq+offset*2] == OFFBOARD ||
             board[sq+offset*3] == OFFBOARD) continue;
           else if (board[sq+offset] == EMPTY) {
-            if (inEye(sq, offset)) continue;
+            if (inEye(sq+offset)) continue;
             else return sq+offset;
           }
         }
