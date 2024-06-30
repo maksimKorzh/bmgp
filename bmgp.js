@@ -217,11 +217,12 @@ function setStone(sq, color, user) { /* Place stone on board */
 function getUrgentMoves() { /* Get escape squares of groups with less than 3 liberties */
   let urgent = [];
   for (let sq = 0; sq < size ** 2; sq++) {
+    if (board[sq] == OFFBOARD || board[sq] == EMPTY) continue;
     count(sq, board[sq]);
-    if (liberties.length < 3) {
-      if (board[sq]-MARKER == BLACK) for (let sq of liberties) urgent.push(sq);
-      if (board[sq]-MARKER == WHITE) for (let sq of liberties) urgent.push(sq);
-    };restoreBoard();
+    if (liberties.length < 3)
+      if (board[sq]-MARKER==BLACK||board[sq]-MARKER==WHITE)
+      for (let sq of liberties) urgent.push(sq);
+    restoreBoard();
   };return urgent;
 }
 
