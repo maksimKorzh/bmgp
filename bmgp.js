@@ -220,10 +220,9 @@ function getUrgentMoves() { /* Get escape squares of groups with less than 3 lib
     if (board[sq] == OFFBOARD || board[sq] == EMPTY) continue;
     count(sq, board[sq]);
     if (liberties.length < 3)
-      if (board[sq]-MARKER==BLACK||board[sq]-MARKER==WHITE)
       for (let sq of liberties) urgent.push(sq);
     restoreBoard();
-  };return urgent;
+  };return [...new Set(urgent)];
 }
 
 function evaluate() { /* Count captures stones difference */
