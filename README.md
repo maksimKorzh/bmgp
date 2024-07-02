@@ -42,9 +42,7 @@ even realizing it.
 
 # Known issues
 Sometimes engine's pass may occur when not expected.
-It's also possible for engine to stuck, it goes into a
-recursion overflow if can't make the best move on board.
-However, despite the above it's playable!
+Just keep playing until the game is over.
 
 # How to play with white?
 Before making the first move open DevTools and type: "play(4)",
