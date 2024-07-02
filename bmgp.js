@@ -259,31 +259,25 @@ function search(depth) { /* Recursively search fighting moves */
 }
 
 function tenuki() { /* Play away when no urgent moves */
-  const corners = [(4*size+4), (4*size+(size-5)), ((size-5)*size+4), ((size-5)*size+(size-5))];
-  const sides = [((size-1)/2*size+3), (3*size+(size-1)/2), ((size-1)/2*size+(size-4)), ((size-4)*size+(size-1)/2)];
-  for (let sq of corners) {
+  const opening = [
+    (4*size+4), (4*size+(size-5)), ((size-5)*size+4), ((size-5)*size+(size-5)),
+    ((size-1)/2*size+3), (3*size+(size-1)/2), ((size-1)/2*size+(size-4)), ((size-4)*size+(size-1)/2)
+  ];
+  for (let sq of opening) {
     if (board[sq] == EMPTY) {
       if (inEye(sq)) break;
       else return sq;
     }
   }
-  for (let sq of sides) if (board[sq] == EMPTY) {
-    if (inEye(sq)) break;
-    else return sq;
-  }
-  if (score()[EMPTY]) {
-    let indexes = Array.from({length: size ** 2}, (_, i) => i);
-    let shuffledIndexes = shuffle(indexes);
-    for (let sq of shuffledIndexes) {
-      if (board[sq] == (3-side)) {
-        for (let offset of [1, -1, size, -size]) {
-          if (board[sq+offset] == OFFBOARD ||
-            board[sq+offset*2] == OFFBOARD ||
-            board[sq+offset*3] == OFFBOARD) continue;
-          else if (board[sq+offset] == EMPTY) {
-            if (inEye(sq+offset)) continue;
-            else return sq+offset;
-          }
+  for (let sq = 0; sq < size ** 2; sq++) {
+    if (board[sq] == (3-side)) {
+      for (let offset of [-1, -size, size, 1]) {
+        if (board[sq+offset] == OFFBOARD ||
+          board[sq+offset*2] == OFFBOARD ||
+          board[sq+offset*3] == OFFBOARD) continue;
+        else if (board[sq+offset] == EMPTY) {
+          if (inEye(sq+offset)) continue;
+          else return sq+offset;
         }
       }
     }
@@ -327,23 +321,6 @@ function play(depth) { /* Engine plays a move */
   updateScore();
   attempts = 0;
   let scorePosition = score();
-}
-
-// MISC
-function shuffle(array) { /* Used to randomize attach moves when tenuki */
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  };return array;
-}
-
-function printPosition() { /* Debug board array */
-  let position = "";
-  for (let sq = 0; sq < size ** 2; sq++) {
-    position += (!(sq % size)) ? "\n" : "";
-    position += board[sq] + " ";
-  };console.log(position);
-  console.log("Side to move: " + (side == 1 ? "black" : "white"));
 }
 
 // MAIN
