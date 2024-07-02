@@ -29,9 +29,9 @@ var points_side = [];
 var points_count = [];
 var ko = EMPTY;
 var bestMove = EMPTY;
+var userMove = 0;
 var cell = canvas.width / size;
 var selectSize = document.getElementById("size");
-var attempts = 0;
 
 // GUI
 function drawBoard() { /* Render board to screen */
@@ -58,7 +58,7 @@ function drawBoard() { /* Render board to screen */
         ctx.fill();
         ctx.stroke();
       }
-      if (sq == bestMove) {
+      if (sq == userMove) {
         let color = board[sq] == 1 ? "white" : "black";
         ctx.beginPath();
         ctx.arc(col * cell+(cell/4)*2, row * cell +(cell/4)*2, cell / 4 - 2, 0, 2 * Math.PI);
@@ -191,7 +191,6 @@ function restoreBoard() { /* Remove group markers */
 }
 
 function setStone(sq, color, user) { /* Place stone on board */
-  bestMove = sq;
   if (board[sq] != EMPTY) {
     if (user) alert("Illegal move!");
     return false;
@@ -211,6 +210,7 @@ function setStone(sq, color, user) { /* Place stone on board */
     if (user) alert("Suicide move!");
     return false;
   } side = 3 - side;
+  userMove = sq;
   return true;
 }
 
@@ -251,7 +251,7 @@ function search(depth) { /* Recursively search fighting moves */
     let eval = -search(depth-1);
     if (eval > bestScore) {
       bestScore = eval;
-      bestMove = sq;
+      if (depth == 4) bestMove = sq;
     } board = JSON.parse(oldBoard);
     side = oldSide;
     ko = oldKo;
@@ -259,11 +259,10 @@ function search(depth) { /* Recursively search fighting moves */
 }
 
 function tenuki() { /* Play away when no urgent moves */
-  const opening = [
+  for (let sq of [
     (4*size+4), (4*size+(size-5)), ((size-5)*size+4), ((size-5)*size+(size-5)),
     ((size-1)/2*size+3), (3*size+(size-1)/2), ((size-1)/2*size+(size-4)), ((size-4)*size+(size-1)/2)
-  ];
-  for (let sq of opening) {
+  ]) {
     if (board[sq] == EMPTY) {
       if (inEye(sq)) break;
       else return sq;
@@ -272,54 +271,36 @@ function tenuki() { /* Play away when no urgent moves */
   for (let sq = 0; sq < size ** 2; sq++) {
     if (board[sq] == (3-side)) {
       for (let offset of [-1, -size, size, 1]) {
-        if (board[sq+offset] == OFFBOARD ||
-          board[sq+offset*2] == OFFBOARD ||
-          board[sq+offset*3] == OFFBOARD) continue;
-        else if (board[sq+offset] == EMPTY) {
-          if (inEye(sq+offset)) continue;
-          else return sq+offset;
+        if (board[sq] == 3-side && board[sq+offset] == EMPTY) {
+          let count = 0;
+          for (let lib of [1, -1, size, -size])
+            if (board[sq+offset+lib] == EMPTY) count++;
+          if (count > 2) return sq+offset;
         }
       }
     }
   }
 }
 
-function isAtari() { /* Find capture square of the biggest group */
-  let bestAtari = [-1, -1];
-  for (let sq = 0; sq < size ** 2; sq++) {
-    count(sq, board[sq]);
-    if (liberties.length == 1) {
-      if (board[sq]-MARKER == 3-side && block.length > bestAtari[1])
-        bestAtari = [liberties[0], block.length];
-    };restoreBoard();
-  };return bestAtari[0];
-}
-
 function play(depth) { /* Engine plays a move */
   let eval = 0;
-  let bestQuick = isAtari();
-  if (bestQuick >= 0 && bestQuick != ko) bestMove = bestQuick;
-  else {
-    eval = search(depth);
-    if (eval < 0) bestMove = tenuki();
-  };let oldSide = side;
+  bestMove = 0;
+  eval = search(depth);
+  if (eval == -10000) bestMove = tenuki();
+  let oldSide = side;
   if (!setStone(bestMove, side, false)) {
-    if (attempts > 10) {
-      side = 3 - side;
-      updateScore();
-      let empty = score()[EMPTY];
-      if (empty == 0) {
-        let finalScore = score();
-        finalScore = finalScore[BLACK] - finalScore[WHITE];
-        alert(((finalScore > 0) ? "Black": "White") + " wins by " + Math.abs(finalScore) + " points");
-        canvas.removeEventListener("click", userInput);
-      } else alert("Pass");
-      return;
-    };attempts++;
-    play(1);
+    side = 3 - side;
+    updateScore();
+    let empty = score()[EMPTY];
+    if (empty == 0) {
+      let finalScore = score();
+      finalScore = finalScore[BLACK] - finalScore[WHITE];
+      alert(((finalScore > 0) ? "Black": "White") + " wins by " + Math.abs(finalScore) + " points");
+      canvas.removeEventListener("click", userInput);
+    } else alert("Pass");
+    return;
   };drawBoard();
   updateScore();
-  attempts = 0;
   let scorePosition = score();
 }
 
@@ -332,4 +313,7 @@ selectSize.addEventListener("change", function() {
   drawBoard();
   side = BLACK;
   ko = EMPTY;
-}); initBoard(); drawBoard();
+});
+
+initBoard();
+drawBoard();
