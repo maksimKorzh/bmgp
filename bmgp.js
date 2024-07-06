@@ -152,19 +152,19 @@ function inEye(sq) { /* Check if sqaure is in diamond shape */
   return eyeColor;
 }
 
-function clearBlock() { /* Erase stones when captured */
-  if (block.length == 1 && inEye(bestMove, 0) == 3-side) ko = block[0];
+function clearBlock(move) { /* Erase stones when captured */
+  if (block.length == 1 && inEye(move, 0) == 3-side) ko = block[0];
   for (let i = 0; i < block.length; i++)
     board[block[i]] = EMPTY;
 }
 
-function captures(color) { /* Handle captured stones */
+function captures(color, move) { /* Handle captured stones */
   for (let sq = 0; sq < size ** 2; sq++) {
     let stone = board[sq];
     if (stone == OFFBOARD) continue;
     if (stone & color) {
       count(sq, color);
-      if (liberties.length == 0) clearBlock();
+      if (liberties.length == 0) clearBlock(move);
       restoreBoard()
     }
   }
@@ -200,7 +200,7 @@ function setStone(sq, color, user) { /* Place stone on board */
   } let old_ko = ko;
   ko = EMPTY;
   board[sq] = color;
-  captures(3 - color);
+  captures(3 - color, sq);
   count(sq, color);
   let suicide = liberties.length ? false : true; 
   restoreBoard();
