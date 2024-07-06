@@ -267,23 +267,25 @@ function tenuki(direction) { /* Play away when no urgent moves */
       if (inEye(sq)) break;
       else return sq;
     }
-  };let smallestGroup = 100, tenuki = 0;
-  for (let sq = 0; sq < size ** 2; sq++) {
-    if (board[sq] == (3-side)) {
-      let attack = 0;
-      count(sq, board[sq]);
-      if (liberties.length < smallestGroup) {
-        smallestGroup = liberties.length;
-        attack = liberties[0];
-      } else if (liberties.length) {
-        attack = liberties[(direction?liberties.length-1:0)];
-      };restoreBoard();
-        let libs = 0;
-        for (let lib of [1, -1, size, -size])
-          if (board[attack+lib] == EMPTY) libs++;
-        if (attack&&libs) tenuki = attack;
-    }
-  };return tenuki;
+  };if (score()[EMPTY]) {
+    let smallestGroup = 100, tenuki = 0;
+    for (let sq = 0; sq < size ** 2; sq++) {
+      if (board[sq] == (3-side)) {
+        let attack = 0;
+        count(sq, board[sq]);
+        if (liberties.length < smallestGroup) {
+          smallestGroup = liberties.length;
+          attack = liberties[0];
+        } else if (liberties.length) {
+          attack = liberties[(direction?liberties.length-1:0)];
+        };restoreBoard();
+          let libs = 0;
+          for (let lib of [1, -1, size, -size])
+            if (board[attack+lib] == EMPTY) libs++;
+          if (attack&&libs) tenuki = attack;
+      }
+    };return tenuki;
+  }
 }
 
 function play(depth) { /* Engine plays a move */
