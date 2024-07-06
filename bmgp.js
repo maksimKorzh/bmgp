@@ -80,7 +80,7 @@ function userInput(event) { /* Handle user input */
   if (board[sq]) return;
   if (!setStone(sq, side, true)) return;
   drawBoard();
-  setTimeout(function() { play(4); }, 10);
+  setTimeout(function() { play(6); }, 10);
 }
 
 function territory(sq) { /* Count territory, returns [side, points]*/
@@ -90,7 +90,7 @@ function territory(sq) { /* Count territory, returns [side, points]*/
     block.push(sq);
     points_count.push(sq);
     board[sq] |= MARKER;
-    for (let offset of [1, -1, size, -size]) territory(sq+offset);
+    for (let offset of [1, size, -1, -size]) territory(sq+offset);
   } else if (stone != MARKER) {
     points_side.push(stone);
   } if (!points_side.length) return [EMPTY, points_count.length];
@@ -139,7 +139,7 @@ function initBoard() { /* Empty board, set offboard squares */
 function inEye(sq) { /* Check if sqaure is in diamond shape */
   let eyeColor = -1;
   let otherColor = -1;
-  for (let offset of [1, -1, size, -size]) {
+  for (let offset of [1, size, -1, -size]) {
     if (board[sq+offset] == OFFBOARD) continue;
     if (board[sq+offset] == EMPTY) return 0;
     if (eyeColor == -1) {
@@ -176,7 +176,7 @@ function count(sq, color) { /* Count group liberties */
   if (stone && (stone & color) && (stone & MARKER) == 0) {
     block.push(sq);
     board[sq] |= MARKER;
-    for (let offset of [1, -1, size, -size]) count(sq+offset, color);
+    for (let offset of [1, size, -1, -size]) count(sq+offset, color);
   } else if (stone == EMPTY) {
     board[sq] |= LIBERTY;
     liberties.push(sq);
@@ -241,7 +241,7 @@ function search(depth) { /* Recursively search fighting moves */
   if (!depth) return evaluate();
   let bestScore = -10000;
   for (let sq of getUrgentMoves()) {
-    for (let offset of [1, -1, size, -size])
+    for (let offset of [1, size, -1, -size])
       if (board[sq+offset] == OFFBOARD && depth == 1) continue;
     if (sq == ko) continue;
     let oldBoard = JSON.stringify(board);
@@ -251,14 +251,14 @@ function search(depth) { /* Recursively search fighting moves */
     let eval = -search(depth-1);
     if (eval > bestScore) {
       bestScore = eval;
-      if (depth == 4) bestMove = sq;
+      if (depth == 6) bestMove = sq;
     } board = JSON.parse(oldBoard);
     side = oldSide;
     ko = oldKo;
   };return bestScore;
 }
 
-function tenuki() { /* Play away when no urgent moves */
+function tenuki(direction) { /* Play away when no urgent moves */
   for (let sq of [
     (4*size+4), (4*size+(size-5)), ((size-5)*size+4), ((size-5)*size+(size-5)),
     ((size-1)/2*size+3), (3*size+(size-1)/2), ((size-1)/2*size+(size-4)), ((size-4)*size+(size-1)/2)
@@ -267,27 +267,33 @@ function tenuki() { /* Play away when no urgent moves */
       if (inEye(sq)) break;
       else return sq;
     }
-  }
+  };let smallestGroup = 100, tenuki = 0;
   for (let sq = 0; sq < size ** 2; sq++) {
     if (board[sq] == (3-side)) {
-      for (let offset of [-1, -size, size, 1]) {
-        if (board[sq] == 3-side && board[sq+offset] == EMPTY) {
-          let count = 0;
-          for (let lib of [1, -1, size, -size])
-            if (board[sq+offset+lib] == EMPTY) count++;
-          if (count > 2) return sq+offset;
-        }
-      }
+      let attack = 0;
+      count(sq, board[sq]);
+      if (liberties.length < smallestGroup) {
+        smallestGroup = liberties.length;
+        attack = liberties[0];
+      } else if (liberties.length) {
+        attack = liberties[(direction?liberties.length-1:0)];
+      };restoreBoard();
+        let libs = 0;
+        for (let lib of [1, -1, size, -size])
+          if (board[attack+lib] == EMPTY) libs++;
+        if (attack&&libs) tenuki = attack;
     }
-  }
+  };return tenuki;
 }
 
 function play(depth) { /* Engine plays a move */
   let eval = 0;
   bestMove = 0;
   eval = search(depth);
-  if (eval == -10000) bestMove = tenuki();
-  let oldSide = side;
+  if (!bestMove) {
+    bestMove = tenuki(1);
+    if (!bestMove) bestMove = tenuki(0);
+  };let oldSide = side;
   if (!setStone(bestMove, side, false)) {
     side = 3 - side;
     updateScore();
