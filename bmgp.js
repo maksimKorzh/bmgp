@@ -108,10 +108,10 @@ function score() { /* Scores game, returns points [empty, black, white]*/
     points_side = [];
     points_count = [];
   } restoreBoard();
-  let prisoners = evaluate();
+  let prisoners = (side == BLACK ? evaluate(): -evaluate());
   if (prisoners > 0) scorePosition[BLACK] += prisoners;
-  else if (prisoners < 0) scorePosition[WHITE] += Math.abs(prisoners);
-  scorePosition[WHITE] += 7.5;
+  if (prisoners < 0) scorePosition[WHITE] += Math.abs(prisoners);
+  scorePosition[WHITE] += 6.5; // komi
   return scorePosition;
 }
 
@@ -282,7 +282,7 @@ function tenuki(direction) { /* Play away when no urgent moves */
           let libs = 0;
           for (let lib of [1, -1, size, -size])
             if (board[attack+lib] == EMPTY) libs++;
-          if (attack&&libs) tenuki = attack;
+          if (attack&&libs&&attack!=ko) tenuki = attack;
       }
     };return tenuki;
   }
