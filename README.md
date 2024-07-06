@@ -40,10 +40,6 @@ can beat human player if he only builds small groups on the
 sides - it just happens engine takes the entire center without
 even realizing it.
 
-# Known issues
-Sometimes engine's pass may occur when not expected.
-Just keep playing until the game is over.
-
 # How to play with white?
 Before making the first move open DevTools and type: "play(4)",
 then hit enter. Engine would make a move, you can now play with
